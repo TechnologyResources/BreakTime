@@ -1,0 +1,113 @@
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Shift Selection -->
+        <div id="shiftSelection" class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">اختر فترة الدوام:</h2>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button id="morningShiftButton" onclick="selectShift('morning')" class="flex-1 bg-gradient-to-r from-blue-100 to-blue-300 hover:from-blue-200 hover:to-blue-400 text-blue-800 font-medium py-4 px-6 rounded-lg shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-center gap-2">
+                        <i data-feather="sun"></i>
+                        <span>الدوام الصباحي (9 ص - 5 م)</span>
+                    </div>
+                </button>
+                <button id="eveningShiftButton" onclick="selectShift('evening')" class="flex-1 bg-gradient-to-r from-purple-100 to-purple-300 hover:from-purple-200 hover:to-purple-400 text-purple-800 font-medium py-4 px-6 rounded-lg shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-center gap-2">
+                        <i data-feather="moon"></i>
+                        <span>الدوام المسائي (3 م - 11 م)</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Break Selection (hidden initially) -->
+        <div id="breakSelection" class="hidden p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">اختر فترات الراحة</h2>
+                <div class="flex items-center gap-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
+                    <span id="selectedCount">0</span>
+                    <span>/ 3</span>
+                </div>
+            </div>
+            
+            <div id="timeSlotsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6"></div>
+            
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input id="employeeName" type="text" placeholder="اسم الموظف" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button id="confirmButton" disabled class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-lg shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    تأكيد الحجز
+                </button>
+                <button onclick="resetSelection()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg shadow-sm transition-all duration-300">
+                    إعادة تعيين
+                </button>
+            </div>
+        </div>
+
+        <!-- Schedule Display -->
+        <div id="scheduleDisplay" class="p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">جدول فترات الراحة</h2>
+            <div id="scheduleTable" class="bg-gray-50 rounded-lg overflow-hidden">
+                <div class="grid grid-cols-12 bg-gray-200 font-medium text-gray-700">
+                    <div class="col-span-3 p-3 border-r border-gray-300">الموظف</div>
+                    <div class="col-span-3 p-3 border-r border-gray-300">البريك الأول</div>
+                    <div class="col-span-3 p-3 border-r border-gray-300">البريك الثاني</div>
+                    <div class="col-span-3 p-3">البريك الثالث</div>
+                </div>
+                <div id="scheduleContent" class="divide-y divide-gray-200">
+                    <div class="grid grid-cols-12 text-center items-center py-3 px-2 text-gray-600">
+                        <div class="col-span-12 p-2">لا توجد حجوزات حتى الآن</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Time Display -->
+    <div class="mt-6 text-center text-gray-500">
+        <p id="currentTime" class="text-sm"></p>
+    </div>
+
+    <!-- Countdown Display -->
+    <div id="countdownContainer" class="text-center mt-6 hidden">
+        <p class="text-lg text-gray-700">العد التنازلي حتى بداية الشفت:</p>
+        <p id="countdown" class="text-2xl font-semibold text-indigo-600"></p>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="fixed bottom-4 right-4 space-y-2"></div>
+</div>
+
+<script>
+    feather.replace();
+
+    let employees = [];
+    let selectedShift = null;
+    let selectedBreaks = [];
+    const morningBreakSlots = ["10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM"];
+    const eveningBreakSlots = ["4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM"];
+    
+    const shiftSelection = document.getElementById('shiftSelection');
+    const breakSelection = document.getElementById('breakSelection');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const selectedCount = document.getElementById('selectedCount');
+    const employeeName = document.getElementById('employeeName');
+    const confirmButton = document.getElementById('confirmButton');
+    const scheduleContent = document.getElementById('scheduleContent');
+    const currentTimeDisplay = document.getElementById('currentTime');
+    const notificationContainer = document.getElementById('notificationContainer');
+    const countdownContainer = document.getElementById('countdownContainer');
+    const countdownDisplay = document.getElementById('countdown');
+    const morningShiftButton = document.getElementById('morningShiftButton');
+    const eveningShiftButton = document.getElementById('eveningShiftButton');
+
+    let countdownInterval;
+    let shiftStartTime;
+
+    function selectShift(shift) {
+        selectedShift = shift;
+        shiftSelection.classList.add('hidden');
+        breakSelection.classList.remove('hidden');
+        renderTimeSlots();
+        setupCountdown(shift);
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 60000); // تحديث الوقت كل دقيقة
+    }
