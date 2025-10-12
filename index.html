@@ -81,39 +81,77 @@
         
         // =========================================================================
 
-        let userId = null; 
-        let isAuthReady = false;
+let userId = null; 
+        let isAuthReady = false;
 
-        // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
-        const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
+        // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
+        const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
 
-        // -----------------------------------------------------------
-        // Expose Firebase State and Firestore Functions Globals for Main Script Access
-        // -----------------------------------------------------------
-        window.getDb = () => firebaseDb; 
-        window.getAuth().signInAnonymously() 
-        window.getUserId = () => userId;
-        window.getIsAuthReady = () => isAuthReady;
-        window.getAppId = () => appId; 
-        
-        // Expose critical Firestore functions to the global scope (window)
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.deleteDoc = deleteDoc;
-        window.collection = collection;
-        window.getDocs = getDocs;
-        window.query = query;
-        window.where = where;
-        
-        /**
-         * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore.
-         */
-        window.startRealtimeSync = function() {
-            // التأكد من أن Firestore مهيأ وجاهز
-            if (!window.getDb() || !window.getIsAuthReady()) {
-                return; 
-            }
-            
+        // =========================================================
+        // 🚨 التعديل الحاسم: مُراقب حالة المصادقة لضمان التسلسل 🚨
+        // =========================================================
+        if (firebaseAuth) {
+            firebaseAuth.onAuthStateChanged(user => {
+                if (user) {
+                    // حالة: المصادقة نجحت (تم تسجيل الدخول المجهول أو غيره)
+                    userId = user.uid;
+                    isAuthReady = true;
+                    console.log("Firebase Auth Ready. User ID:", userId);
+
+                    // 💡 استدعاء دالة المزامنة الرئيسية فور نجاح المصادقة
+                    if (window.startRealtimeSync) {
+                        window.startRealtimeSync(); 
+                    }
+
+                } else {
+                    // حالة: لا يوجد مستخدم، لذا نحاول تسجيل الدخول المجهول
+                    userId = null;
+                    isAuthReady = false;
+                    console.log("No user signed in. Attempting Anonymous Sign-In...");
+                    
+                    // محاولة تسجيل الدخول المجهول لتلبية شرط قواعد الأمان
+                    signInAnonymously(firebaseAuth)
+                        .catch(error => {
+                            console.error("Anonymous Sign-In Failed (Check Project Settings):", error);
+                            // عرض إشعار بالفشل إذا لم يتمكن من الاتصال أو فشلت القواعد
+                            window.showNotification('فشل المصادقة. تحقق من إعدادات Firebase وقواعد الأمان.', 'error');
+                        });
+                }
+            });
+
+            // محاولة تسجيل الدخول الأولي إذا لم يكن هناك رمز مميز
+            // (سيتم معالجتها بواسطة onAuthStateChanged)
+        }
+
+
+        // -----------------------------------------------------------
+        // Expose Firebase State and Firestore Functions Globals for Main Script Access
+        // -----------------------------------------------------------
+        window.getDb = () => firebaseDb; 
+        // ❌ تم إزالة استدعاء signInAnonymously() الفوري من هنا 
+        window.getUserId = () => userId;
+        window.getIsAuthReady = () => isAuthReady;
+        window.getAppId = () => appId; 
+        
+        // Expose critical Firestore functions to the global scope (window)
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.deleteDoc = deleteDoc;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.query = query;
+        window.where = where;
+        
+        /**
+         * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore.
+         */
+        window.startRealtimeSync = function() {
+            // التأكد من أن Firestore مهيأ وجاهز
+            if (!window.getDb() || !window.getIsAuthReady()) {
+                // قد يتم استدعاء هذه الدالة في البداية قبل المصادقة، لذا نمنع التنفيذ
+                console.warn("startRealtimeSync: Not running yet. Waiting for Firebase Auth to be ready...");
+                return; 
+            }            
             // تعريف المرجع للمجموعة العامة للحجوزات 
             const employeeBookingsRef = collection(window.getDb(), collectionPath);
 
