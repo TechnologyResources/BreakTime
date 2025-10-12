@@ -19,69 +19,63 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     
-    <script type="module">
-        // Firebase Imports - جميعها موحدة على الإصدار 11.6.1
-    // استيراد المكتبات من النسخة 12.4.0 فقط
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-    import { setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+<script type="module">
+        // Firebase Imports - جميعها موحدة على الإصدار 12.4.0 فقط
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where, setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js"; // تم دمج setLogLevel
 
-    // إعدادات Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
-        authDomain: "breaktime-8e28a.firebaseapp.com",
-        projectId: "breaktime-8e28a",
-        storageBucket: "breaktime-8e28a.firebasestorage.app",
-        messagingSenderId: "653808445317",
-        appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
-        measurementId: "G-077KHT3Y1L"
-    };
-
-    // تهيئة Firebase
-    const appId = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-
-    setLogLevel('Debug'); // تفعيل مستوى Debug
-
-        
         setLogLevel('Debug'); // ⭐️ تفعيل تسجيل مستوى Debug لرؤية سجلات Firebase
-
         
         // =========================================================================
         // ⭐️⭐️ التعديل الأساسي: الاعتماد حصريًا على المتغيرات العامة الآمنة ⭐️⭐️
         
         // 1. استرداد إعدادات Firebase من المتغيرات العامة (GLOBALS)
-        let firebaseConfig = {};
+        let firebaseConfig = {
+             // إعدادات Firebase الافتراضية الثابتة (في حال عدم وجود GLOBALS)
+            apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
+            authDomain: "breaktime-8e28a.firebaseapp.com",
+            projectId: "breaktime-8e28a",
+            storageBucket: "breaktime-8e28a.firebasestorage.app",
+            messagingSenderId: "653808445317",
+            appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
+            measurementId: "G-077KHT3Y1L"
+        };
+        
         try {
-            // استخدام try/catch للتعامل مع السيناريو الذي تكون فيه __firebase_config غير مُعرَّفة
-            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            // تحديث الإعدادات بالإعدادات المُمررة إذا كانت مُعرَّفة
+            const globalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            firebaseConfig = { ...firebaseConfig, ...globalConfig };
         } catch (e) {
             console.error("Error parsing __firebase_config:", e);
         }
 
-        if (Object.keys(firebaseConfig).length === 0) {
-            // هذا التنبيه يظهر إذا لم يتم تهيئة الـ Globals، لكنه آمن الآن
+        if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
             console.error("Firebase configuration is missing or empty. Database functions will fail.");
             window.showNotification('خطأ: إعدادات Firebase مفقودة. لن تعمل وظائف الحفظ.', 'error');
-            // وضع إعدادات وهمية لتجنب تعطل الكود، مع العلم أنها لن تتصل بـ Firebase حقيقية
             firebaseConfig = { projectId: "default-app-id" }; 
         }
         
-        // استخدام projectId لتوليد appId (يجب أن يتطابق مع الإعدادات الفعلية للمستخدم)
-        const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : (firebaseConfig.projectId || 'breaktime-8e28a');
-        
+        // تحديد الـ appId
+        const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : firebaseConfig.projectId;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // 2. تهيئة Firebase
-        
-        let firebaseDb = getFirestore(app);
-        let firebaseAuth = getAuth(app); 
+        // 2. تهيئة Firebase - يجب أن يكون تعريف واحد فقط لـ "app"
+        let app;
+        try {
+             app = initializeApp(firebaseConfig);
+             const analytics = getAnalytics(app);
+        } catch (e) {
+             console.error("Failed to initialize Firebase App:", e);
+        }
+
+        let firebaseDb = app ? getFirestore(app) : null;
+        let firebaseAuth = app ? getAuth(app) : null; 
         
         // =========================================================================
 
-        let userId = null; // Will be set after auth completes
+        let userId = null; 
         let isAuthReady = false;
 
         // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
@@ -94,7 +88,7 @@
         window.getAuth = () => firebaseAuth; 
         window.getUserId = () => userId;
         window.getIsAuthReady = () => isAuthReady;
-        window.getAppId = () => appId; // ⭐️ تعريض appId
+        window.getAppId = () => appId; 
         
         // Expose critical Firestore functions to the global scope (window)
         window.doc = doc;
@@ -149,6 +143,58 @@
             window.firestoreUnsubscribe = unsubscribe;
         };
         // -----------------------------------------------------------
+
+        try {
+            // ⭐️⭐️ التعديل 2: استخدام initialAuthToken للمصادقة ⭐️⭐️
+            async function authenticateAndSetup() {
+                if (!firebaseAuth) {
+                    isAuthReady = true;
+                    return;
+                }
+                 try {
+                    if (initialAuthToken) {
+                        // استخدام الرمز المخصص إذا كان متوفراً
+                        await signInWithCustomToken(firebaseAuth, initialAuthToken);
+                        console.log("Signed in with Custom Token.");
+                    } else { 
+                        // المصادقة المجهولة كخيار احتياطي
+                        await signInAnonymously(firebaseAuth);
+                        console.log("Signed in Anonymously.");
+                    }
+                } catch(error) {
+                    console.error("Error during Firebase sign-in:", error);
+                    window.showNotification(`فشل في المصادقة: ${error.message}`, 'error');
+                }
+
+                // 2. Auth State Listener
+                onAuthStateChanged(firebaseAuth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        console.log("Firebase Auth Ready. User ID:", userId);
+                        // Start real-time sync when auth is ready
+                        window.startRealtimeSync(); 
+                    } else {
+                        userId = null;
+                        isAuthReady = true;
+                        console.log("Firebase Auth Ready: No user logged in.");
+                    }
+                });
+            }
+            
+            // تحقق من وجود 'app' قبل البدء
+            if (app) {
+                authenticateAndSetup(); // بدء عملية المصادقة فقط إذا تم تهيئة التطبيق بنجاح
+            } else {
+                isAuthReady = true; 
+                window.showNotification('فشل تهيئة Firebase. لن تعمل وظائف الحفظ/المزامنة.', 'error');
+            }
+
+
+        } catch (e) {
+            console.error("Failed to initialize Firebase:", e);
+        }
+
 
         try {
             // ⭐️⭐️ التعديل 2: استخدام initialAuthToken للمصادقة ⭐️⭐️
