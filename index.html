@@ -292,10 +292,11 @@ let userId = null; 
     </script>
     
     <!-- تحميل مكتبة الأيقونات Feather Icons -->
-    <script src="https://unpkg.com/feather-icons"></script>
-    
+<script src="https://unpkg.com/feather-icons@4.29.1/dist/feather.min.js"></script>    
     <link rel="icon" href="images/favicon.png" type="image/png" />
-
+<script>
+    feather.replace(); // هذا هو الأمر الذي يمسح الصفحة ويظهر الأيقونات
+</script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
         body {
