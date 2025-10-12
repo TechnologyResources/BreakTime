@@ -20,25 +20,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     
 <script type="module">
-    // Firebase Imports - النسخة 12.4.0
+    // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-    // ⭐️ إضافة App Check والاستيراد الخاص به ⭐️
     import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app-check.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where, setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js"; 
 
-    setLogLevel('Debug'); // تفعيل تسجيل مستوى Debug
+    setLogLevel('Debug'); 
 
     // =========================================================================
-    // ⭐️⭐️ الخطوة 1: تعريف مفتاح reCAPTCHA V3 ⭐️⭐️
-    // يجب عليك الحصول على مفتاح موقع (Site Key) لـ reCAPTCHA V3 من Google
-    // ومن ثم تسجيل هذا المفتاح في إعدادات Firebase App Check.
-    const RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_V3_SITE_KEY'; // <== *** استبدل هذا بمفتاحك ***
+    // 🔴🔴🔴🔴🔴🔴🔴 الخطوة الحاسمة: استبدال هذا المفتاح 🔴🔴🔴🔴🔴🔴🔴
+    const RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_V3_SITE_KEY'; 
 
-    // 1. استرداد إعدادات Firebase من المتغيرات العامة (GLOBALS)
+    // 1. استرداد إعدادات Firebase
     let firebaseConfig = {
-         // إعدادات Firebase الافتراضية الثابتة 
         apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
         authDomain: "breaktime-8e28a.firebaseapp.com",
         projectId: "breaktime-8e28a",
@@ -47,15 +43,14 @@
         appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
         measurementId: "G-077KHT3Y1L"
     };
-    
-    // ... (كود استرداد الإعدادات من __firebase_config يظل كما هو)
+    // ... (كود استرداد الإعدادات الديناميكية)
     try {
         const globalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         firebaseConfig = { ...firebaseConfig, ...globalConfig };
     } catch (e) {
         console.error("Error parsing __firebase_config:", e);
     }
-
+    // ... (كود التحقق من الإعدادات)
     if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
         console.error("Firebase configuration is missing or empty.");
         window.showNotification('خطأ: إعدادات Firebase مفقودة. لن تعمل وظائف الحفظ.', 'error');
@@ -65,12 +60,12 @@
     const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : firebaseConfig.projectId;
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
     
-    // 2. تهيئة Firebase - يجب أن يكون تعريف واحد فقط لـ "app"
+    // 2. تهيئة Firebase
     let app;
     try {
          app = initializeApp(firebaseConfig);
          
-         // ⭐️⭐️ الخطوة 2: تهيئة App Check باستخدام مفتاح ReCAPTCHA V3 ⭐️⭐️
+         // 🔴🔴🔴🔴🔴🔴🔴 موضع تهيئة App Check 🔴🔴🔴🔴🔴🔴🔴
          if (RECAPTCHA_SITE_KEY && RECAPTCHA_SITE_KEY !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
             const appCheck = initializeAppCheck(app, {
                 provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
@@ -93,20 +88,14 @@
     // ... (بقية الكود الخاص بالمزامنة والمصادقة يظل كما هو)
     let userId = null; 
     let isAuthReady = false;
-
-    // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
     const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
 
-    // -----------------------------------------------------------
-    // Expose Firebase State and Firestore Functions Globals for Main Script Access
-    // -----------------------------------------------------------
     window.getDb = () => firebaseDb; 
     window.getAuth = () => firebaseAuth; 
     window.getUserId = () => userId;
     window.getIsAuthReady = () => isAuthReady;
     window.getAppId = () => appId; 
     
-    // Expose critical Firestore functions to the global scope (window)
     window.doc = doc;
     window.setDoc = setDoc;
     window.deleteDoc = deleteDoc;
@@ -115,9 +104,6 @@
     window.query = query;
     window.where = where;
     
-    /**
-     * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore.
-     */
     window.startRealtimeSync = function() {
         if (!window.getDb() || !window.getIsAuthReady()) {
             return; 
@@ -155,7 +141,6 @@
         });
         window.firestoreUnsubscribe = unsubscribe;
     };
-    // -----------------------------------------------------------
 
     try {
         async function authenticateAndSetup() {
@@ -201,7 +186,6 @@
     } catch (e) {
         console.error("Failed to initialize Firebase:", e);
     }
-
 
         try {
             // ⭐️⭐️ التعديل 2: استخدام initialAuthToken للمصادقة ⭐️⭐️
