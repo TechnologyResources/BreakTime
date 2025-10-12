@@ -30,28 +30,31 @@
 
         
         // =========================================================================
-        // ⭐️⭐️ التعديل الأساسي: استخدام إعدادات Firebase التي قدمها المستخدم ⭐️⭐️
+        // ⭐️⭐️ التعديل الأساسي: الاعتماد حصريًا على المتغيرات العامة الآمنة ⭐️⭐️
         
-        const HARDCODED_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
-            authDomain: "breaktime-8e28a.firebaseapp.com",
-            projectId: "breaktime-8e28a",
-            storageBucket: "breaktime-8e28a.firebasestorage.app",
-            messagingSenderId: "653808445317",
-            appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
-            measurementId: "G-077KHT3Y1L"
-        };
+        // 1. استرداد إعدادات Firebase من المتغيرات العامة (GLOBALS)
+        let firebaseConfig = {};
+        try {
+            // استخدام try/catch للتعامل مع السيناريو الذي تكون فيه __firebase_config غير مُعرَّفة
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        } catch (e) {
+            console.error("Error parsing __firebase_config:", e);
+        }
 
-        // إذا تم توفير إعدادات البيئة (Canvas Globals)، فاستخدمها، وإلا فاستخدم الإعدادات المدمجة
-        const envConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const firebaseConfig = (Object.keys(envConfig).length > 0) ? envConfig : HARDCODED_FIREBASE_CONFIG;
+        if (Object.keys(firebaseConfig).length === 0) {
+            // هذا التنبيه يظهر إذا لم يتم تهيئة الـ Globals، لكنه آمن الآن
+            console.error("Firebase configuration is missing or empty. Database functions will fail.");
+            window.showNotification('خطأ: إعدادات Firebase مفقودة. لن تعمل وظائف الحفظ.', 'error');
+            // وضع إعدادات وهمية لتجنب تعطل الكود، مع العلم أنها لن تتصل بـ Firebase حقيقية
+            firebaseConfig = { projectId: "default-app-id" }; 
+        }
         
-        // استخدام projectId كمعرّف للتطبيق (appId) في حال عدم توفر المتغير العالمي __app_id
-        const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : firebaseConfig.projectId;
+        // استخدام projectId لتوليد appId (يجب أن يتطابق مع الإعدادات الفعلية للمستخدم)
+        const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : (firebaseConfig.projectId || 'breaktime-8e28a');
         
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // الآن يمكننا تهيئة Firebase بثقة
+        // 2. تهيئة Firebase
         const app = initializeApp(firebaseConfig);
         
         let firebaseDb = getFirestore(app);
@@ -63,7 +66,6 @@
         let isAuthReady = false;
 
         // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
-        // الآن يستخدم appId المحدّد إما من البيئة أو من projectId
         const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
 
         // -----------------------------------------------------------
@@ -86,18 +88,14 @@
         
         /**
          * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore.
-         * هذه الدالة تستخدم collection و onSnapshot مباشرة من نطاق Module.
-         * @returns {void}
          */
         window.startRealtimeSync = function() {
             // التأكد من أن Firestore مهيأ وجاهز
             if (!window.getDb() || !window.getIsAuthReady()) {
-                // إذا لم تكن جاهزة، نخرج بصمت.
                 return; 
             }
             
-            // تعريف المرجع للمجموعة العامة للحجوزات (تستخدم collection المستوردة مباشرة)
-            // ⭐️ استخدام المسار الإجباري
+            // تعريف المرجع للمجموعة العامة للحجوزات 
             const employeeBookingsRef = collection(window.getDb(), collectionPath);
 
             // نستخدم onSnapshot من Firestore للاستماع للتغييرات في الوقت الفعلي
@@ -107,7 +105,6 @@
                     ...doc.data()
                 }));
 
-                // استخدام دالة global لتحديث مصفوفة employees في السكربت العادي
                 if (typeof window.setEmployees === 'function') {
                     window.setEmployees(fetchedEmployees);
                 } else {
@@ -115,7 +112,6 @@
                     return;
                 }
                 
-                // تحديث الواجهة للتأكد من رؤية التغييرات فوراً 
                 if (window.selectedShift) {
                     window.renderTimeSlots(); 
                     window.renderSchedule();  
@@ -127,12 +123,10 @@
 
             }, (error) => {
                 console.error("Firestore read failed: " + error.message);
-                // إشعار خطأ فقط إذا لم يكن الخطأ بسبب عدم التهيئة
                 if (!error.message.includes("is not initialized")) {
                     window.showNotification("فشل في تحميل جدول الحجوزات: " + error.message, 'error');
                 }
             });
-            // ⭐️ Expose unsubscribe function globally if needed for cleanup, though usually not needed in this context.
             window.firestoreUnsubscribe = unsubscribe;
         };
         // -----------------------------------------------------------
@@ -141,7 +135,6 @@
             // ⭐️⭐️ التعديل 2: استخدام initialAuthToken للمصادقة ⭐️⭐️
             async function authenticateAndSetup() {
                 if (!firebaseAuth) {
-                    console.warn("Firebase Auth is not available. Skipping authentication.");
                     isAuthReady = true;
                     return;
                 }
@@ -179,7 +172,7 @@
             if (app) {
                 authenticateAndSetup(); // بدء عملية المصادقة فقط إذا تم تهيئة التطبيق بنجاح
             } else {
-                isAuthReady = true; // لتمكين بقية واجهة المستخدم
+                isAuthReady = true; 
                 window.showNotification('فشل تهيئة Firebase. لن تعمل وظائف الحفظ/المزامنة.', 'error');
             }
 
@@ -633,7 +626,7 @@
             }, 4000);
         }
 
-        // ****** التعديل 2: دالة لحفظ البيانات (تم تعديلها لاستخدام window.doc و window.setDoc) ******
+        // ****** دالة لحفظ البيانات (تم تعديلها لاستخدام window.doc و window.setDoc) ******
         /**
          * دالة لحفظ أو تحديث حجز موظف في Firestore.
          */
@@ -808,7 +801,7 @@
             const docRefEvening = window.doc(db, collectionPath, docIdEvening);
 
             try {
-                // FIX 6: استخدام window.deleteDoc للحذف
+                // استخدام window.deleteDoc للحذف
                 await Promise.all([
                     window.deleteDoc(docRefMorning).catch(e => console.log(`No morning record for ${nameToDelete}: ${e.message}`)),
                     window.deleteDoc(docRefEvening).catch(e => console.log(`No evening record for ${nameToDelete}: ${e.message}`))
@@ -828,7 +821,6 @@
 
         /**
          * دالة لحذف بريك واحد لموظف محدد (للاستخدام الإداري).
-         * تم تفعيل هذه الوظيفة بناءً على طلب المستخدم.
          */
         async function deleteSingleBreak() {
             const db = window.getDb();
@@ -1063,7 +1055,7 @@
             });
         }
 
-        // ******* التعديل 3: منطق التحقق من الترتيب الزمني *******
+        // ******* منطق التحقق من الترتيب الزمني *******
         function toggleBreakSelection(slotStartTime, duration) {
             const index = selectedBreaks.findIndex(b => b.time === slotStartTime && b.duration === duration);
             
@@ -1139,7 +1131,7 @@
             confirmButton.disabled = !(isCorrectDurationOrder && isCorrectTimeOrder && employeeName.value.trim());
         }
 
-        // ******* التعديل 4: استدعاء دالة الحفظ داخل تأكيد الحجز (تم تفعيلها هنا) *******
+        // ******* استدعاء دالة الحفظ داخل تأكيد الحجز (تم تفعيلها هنا) *******
         async function confirmReservation() {
             const name = employeeName.value.trim();
             
