@@ -21,10 +21,30 @@
     
     <script type="module">
         // Firebase Imports - جميعها موحدة على الإصدار 11.6.1
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    // استيراد المكتبات من النسخة 12.4.0 فقط
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+    // إعدادات Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
+        authDomain: "breaktime-8e28a.firebaseapp.com",
+        projectId: "breaktime-8e28a",
+        storageBucket: "breaktime-8e28a.firebasestorage.app",
+        messagingSenderId: "653808445317",
+        appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
+        measurementId: "G-077KHT3Y1L"
+    };
+
+    // تهيئة Firebase
+    const appId = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+
+    setLogLevel('Debug'); // تفعيل مستوى Debug
+
         
         setLogLevel('Debug'); // ⭐️ تفعيل تسجيل مستوى Debug لرؤية سجلات Firebase
 
@@ -55,7 +75,6 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         // 2. تهيئة Firebase
-        const app = initializeApp(firebaseConfig);
         
         let firebaseDb = getFirestore(app);
         let firebaseAuth = getAuth(app); 
