@@ -20,180 +20,187 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     
 <script type="module">
-        // Firebase Imports - جميعها موحدة على الإصدار 12.4.0 فقط
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where, setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js"; // تم دمج setLogLevel
+    // Firebase Imports - النسخة 12.4.0
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    // ⭐️ إضافة App Check والاستيراد الخاص به ⭐️
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app-check.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where, setLogLevel } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js"; 
 
-        setLogLevel('Debug'); // ⭐️ تفعيل تسجيل مستوى Debug لرؤية سجلات Firebase
-        
-        // =========================================================================
-        // ⭐️⭐️ التعديل الأساسي: الاعتماد حصريًا على المتغيرات العامة الآمنة ⭐️⭐️
-        
-        // 1. استرداد إعدادات Firebase من المتغيرات العامة (GLOBALS)
-        let firebaseConfig = {
-             // إعدادات Firebase الافتراضية الثابتة (في حال عدم وجود GLOBALS)
-            apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
-            authDomain: "breaktime-8e28a.firebaseapp.com",
-            projectId: "breaktime-8e28a",
-            storageBucket: "breaktime-8e28a.firebasestorage.app",
-            messagingSenderId: "653808445317",
-            appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
-            measurementId: "G-077KHT3Y1L"
-        };
-        
-        try {
-            // تحديث الإعدادات بالإعدادات المُمررة إذا كانت مُعرَّفة
-            const globalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            firebaseConfig = { ...firebaseConfig, ...globalConfig };
-        } catch (e) {
-            console.error("Error parsing __firebase_config:", e);
+    setLogLevel('Debug'); // تفعيل تسجيل مستوى Debug
+
+    // =========================================================================
+    // ⭐️⭐️ الخطوة 1: تعريف مفتاح reCAPTCHA V3 ⭐️⭐️
+    // يجب عليك الحصول على مفتاح موقع (Site Key) لـ reCAPTCHA V3 من Google
+    // ومن ثم تسجيل هذا المفتاح في إعدادات Firebase App Check.
+    const RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_V3_SITE_KEY'; // <== *** استبدل هذا بمفتاحك ***
+
+    // 1. استرداد إعدادات Firebase من المتغيرات العامة (GLOBALS)
+    let firebaseConfig = {
+         // إعدادات Firebase الافتراضية الثابتة 
+        apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
+        authDomain: "breaktime-8e28a.firebaseapp.com",
+        projectId: "breaktime-8e28a",
+        storageBucket: "breaktime-8e28a.firebasestorage.app",
+        messagingSenderId: "653808445317",
+        appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
+        measurementId: "G-077KHT3Y1L"
+    };
+    
+    // ... (كود استرداد الإعدادات من __firebase_config يظل كما هو)
+    try {
+        const globalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        firebaseConfig = { ...firebaseConfig, ...globalConfig };
+    } catch (e) {
+        console.error("Error parsing __firebase_config:", e);
+    }
+
+    if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
+        console.error("Firebase configuration is missing or empty.");
+        window.showNotification('خطأ: إعدادات Firebase مفقودة. لن تعمل وظائف الحفظ.', 'error');
+        firebaseConfig = { projectId: "default-app-id" }; 
+    }
+    
+    const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : firebaseConfig.projectId;
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
+    // 2. تهيئة Firebase - يجب أن يكون تعريف واحد فقط لـ "app"
+    let app;
+    try {
+         app = initializeApp(firebaseConfig);
+         
+         // ⭐️⭐️ الخطوة 2: تهيئة App Check باستخدام مفتاح ReCAPTCHA V3 ⭐️⭐️
+         if (RECAPTCHA_SITE_KEY && RECAPTCHA_SITE_KEY !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+            const appCheck = initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+                isTokenAutoRefreshEnabled: true
+            });
+            console.log("Firebase App Check initialized with ReCAPTCHA V3.");
+         } else {
+             // تنبيه إذا لم يتم وضع المفتاح
+             console.warn("App Check not fully initialized: Missing or placeholder ReCAPTCHA V3 key. This may cause (auth/firebase-app-check-token-is-invalid).");
+         }
+
+         const analytics = getAnalytics(app);
+    } catch (e) {
+         console.error("Failed to initialize Firebase App:", e);
+    }
+
+    let firebaseDb = app ? getFirestore(app) : null;
+    let firebaseAuth = app ? getAuth(app) : null; 
+    
+    // ... (بقية الكود الخاص بالمزامنة والمصادقة يظل كما هو)
+    let userId = null; 
+    let isAuthReady = false;
+
+    // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
+    const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
+
+    // -----------------------------------------------------------
+    // Expose Firebase State and Firestore Functions Globals for Main Script Access
+    // -----------------------------------------------------------
+    window.getDb = () => firebaseDb; 
+    window.getAuth = () => firebaseAuth; 
+    window.getUserId = () => userId;
+    window.getIsAuthReady = () => isAuthReady;
+    window.getAppId = () => appId; 
+    
+    // Expose critical Firestore functions to the global scope (window)
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.deleteDoc = deleteDoc;
+    window.collection = collection;
+    window.getDocs = getDocs;
+    window.query = query;
+    window.where = where;
+    
+    /**
+     * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore.
+     */
+    window.startRealtimeSync = function() {
+        if (!window.getDb() || !window.getIsAuthReady()) {
+            return; 
         }
-
-        if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
-            console.error("Firebase configuration is missing or empty. Database functions will fail.");
-            window.showNotification('خطأ: إعدادات Firebase مفقودة. لن تعمل وظائف الحفظ.', 'error');
-            firebaseConfig = { projectId: "default-app-id" }; 
-        }
         
-        // تحديد الـ appId
-        const appId = typeof __app_id !== 'undefined' && __app_id !== 'default-app-id' ? __app_id : firebaseConfig.projectId;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        // 2. تهيئة Firebase - يجب أن يكون تعريف واحد فقط لـ "app"
-        let app;
-        try {
-             app = initializeApp(firebaseConfig);
-             const analytics = getAnalytics(app);
-        } catch (e) {
-             console.error("Failed to initialize Firebase App:", e);
-        }
+        const employeeBookingsRef = collection(window.getDb(), collectionPath);
 
-        let firebaseDb = app ? getFirestore(app) : null;
-        let firebaseAuth = app ? getAuth(app) : null; 
-        
-        // =========================================================================
+        const unsubscribe = onSnapshot(employeeBookingsRef, (snapshot) => {
+            const fetchedEmployees = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
 
-        let userId = null; 
-        let isAuthReady = false;
-
-        // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
-        const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
-
-        // -----------------------------------------------------------
-        // Expose Firebase State and Firestore Functions Globals for Main Script Access
-        // -----------------------------------------------------------
-        window.getDb = () => firebaseDb; 
-        window.getAuth = () => firebaseAuth; 
-        window.getUserId = () => userId;
-        window.getIsAuthReady = () => isAuthReady;
-        window.getAppId = () => appId; 
-        
-        // Expose critical Firestore functions to the global scope (window)
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.deleteDoc = deleteDoc;
-        window.collection = collection;
-        window.getDocs = getDocs;
-        window.query = query;
-        window.where = where;
-        
-        /**
-         * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore.
-         */
-        window.startRealtimeSync = function() {
-            // التأكد من أن Firestore مهيأ وجاهز
-            if (!window.getDb() || !window.getIsAuthReady()) {
-                return; 
+            if (typeof window.setEmployees === 'function') {
+                window.setEmployees(fetchedEmployees);
+            } else {
+                console.error("setEmployees function not found. Data not updated.");
+                return;
             }
             
-            // تعريف المرجع للمجموعة العامة للحجوزات 
-            const employeeBookingsRef = collection(window.getDb(), collectionPath);
+            if (window.selectedShift) {
+                window.renderTimeSlots(); 
+                window.renderSchedule();  
+                window.updateAllTimers(); 
+            }
 
-            // نستخدم onSnapshot من Firestore للاستماع للتغييرات في الوقت الفعلي
-            const unsubscribe = onSnapshot(employeeBookingsRef, (snapshot) => {
-                const fetchedEmployees = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
+            console.log("Employees data synchronized from Firestore.");
+            window.showNotification('تم تحديث جدول الحجوزات.', 'info');
 
-                if (typeof window.setEmployees === 'function') {
-                    window.setEmployees(fetchedEmployees);
+        }, (error) => {
+            console.error("Firestore read failed: " + error.message);
+            if (!error.message.includes("is not initialized")) {
+                window.showNotification("فشل في تحميل جدول الحجوزات: " + error.message, 'error');
+            }
+        });
+        window.firestoreUnsubscribe = unsubscribe;
+    };
+    // -----------------------------------------------------------
+
+    try {
+        async function authenticateAndSetup() {
+            if (!firebaseAuth) {
+                isAuthReady = true;
+                return;
+            }
+             try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(firebaseAuth, initialAuthToken);
+                    console.log("Signed in with Custom Token.");
+                } else { 
+                    await signInAnonymously(firebaseAuth);
+                    console.log("Signed in Anonymously.");
+                }
+            } catch(error) {
+                console.error("Error during Firebase sign-in:", error);
+                window.showNotification(`فشل في المصادقة: ${error.message}`, 'error');
+            }
+
+            onAuthStateChanged(firebaseAuth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    console.log("Firebase Auth Ready. User ID:", userId);
+                    window.startRealtimeSync(); 
                 } else {
-                    console.error("setEmployees function not found. Data not updated.");
-                    return;
-                }
-                
-                if (window.selectedShift) {
-                    window.renderTimeSlots(); 
-                    window.renderSchedule();  
-                    window.updateAllTimers(); 
-                }
-
-                console.log("Employees data synchronized from Firestore.");
-                window.showNotification('تم تحديث جدول الحجوزات.', 'info');
-
-            }, (error) => {
-                console.error("Firestore read failed: " + error.message);
-                if (!error.message.includes("is not initialized")) {
-                    window.showNotification("فشل في تحميل جدول الحجوزات: " + error.message, 'error');
+                    userId = null;
+                    isAuthReady = true;
+                    console.log("Firebase Auth Ready: No user logged in.");
                 }
             });
-            window.firestoreUnsubscribe = unsubscribe;
-        };
-        // -----------------------------------------------------------
-
-        try {
-            // ⭐️⭐️ التعديل 2: استخدام initialAuthToken للمصادقة ⭐️⭐️
-            async function authenticateAndSetup() {
-                if (!firebaseAuth) {
-                    isAuthReady = true;
-                    return;
-                }
-                 try {
-                    if (initialAuthToken) {
-                        // استخدام الرمز المخصص إذا كان متوفراً
-                        await signInWithCustomToken(firebaseAuth, initialAuthToken);
-                        console.log("Signed in with Custom Token.");
-                    } else { 
-                        // المصادقة المجهولة كخيار احتياطي
-                        await signInAnonymously(firebaseAuth);
-                        console.log("Signed in Anonymously.");
-                    }
-                } catch(error) {
-                    console.error("Error during Firebase sign-in:", error);
-                    window.showNotification(`فشل في المصادقة: ${error.message}`, 'error');
-                }
-
-                // 2. Auth State Listener
-                onAuthStateChanged(firebaseAuth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        console.log("Firebase Auth Ready. User ID:", userId);
-                        // Start real-time sync when auth is ready
-                        window.startRealtimeSync(); 
-                    } else {
-                        userId = null;
-                        isAuthReady = true;
-                        console.log("Firebase Auth Ready: No user logged in.");
-                    }
-                });
-            }
-            
-            // تحقق من وجود 'app' قبل البدء
-            if (app) {
-                authenticateAndSetup(); // بدء عملية المصادقة فقط إذا تم تهيئة التطبيق بنجاح
-            } else {
-                isAuthReady = true; 
-                window.showNotification('فشل تهيئة Firebase. لن تعمل وظائف الحفظ/المزامنة.', 'error');
-            }
-
-
-        } catch (e) {
-            console.error("Failed to initialize Firebase:", e);
         }
+        
+        if (app) {
+            authenticateAndSetup(); 
+        } else {
+            isAuthReady = true; 
+            window.showNotification('فشل تهيئة Firebase. لن تعمل وظائف الحفظ/المزامنة.', 'error');
+        }
+
+
+    } catch (e) {
+        console.error("Failed to initialize Firebase:", e);
+    }
 
 
         try {
