@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Break Time Buddy - جدول حجز البريكات</title>
     
-    <!-- تحميل Tailwind CSS مرة واحدة (تم نقل هذا السطر ليتم تحميل المكتبة أولاً) -->
+    <!-- تحميل Tailwind CSS مرة واحدة -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- تأكيد إعدادات Tailwind لتفعيل dark mode عبر الفئة (class) -->
     <script>
-        // الآن يتم الوصول إلى tailwind.config بعد تحميل مكتبة Tailwind، مما يحل مشكلة ReferenceError
         tailwind.config = {
             darkMode: 'class', 
         }
@@ -21,33 +20,53 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     
     <script type="module">
-        // Firebase Imports (MUST be defined here)
+        // Firebase Imports - جميعها موحدة على الإصدار 11.6.1
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // ⭐️ إضافة signInWithCustomToken هنا
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // تم استيراد جميع الدوال اللازمة هنا
         import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // setLogLevel('Debug'); // uncomment for debugging
+        setLogLevel('Debug'); // ⭐️ تفعيل تسجيل مستوى Debug لرؤية سجلات Firebase
+
         
-        // Global variables provided by the Canvas environment
+        // =========================================================================
+        // ⭐️⭐️ التعديل الأساسي: استخدام إعدادات Canvas Globals ⭐️⭐️
+        
+        // استخدام المتغيرات البيئية لـ Canvas (MANDATORY)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        if (!firebaseConfig || !firebaseConfig.projectId || !firebaseConfig.apiKey) {
+            console.error("🚨🚨 خطأ: إعدادات Firebase مفقودة أو غير مكتملة.");
+            // تحديث رسالة الخطأ على الواجهة
+            document.getElementById('shiftSelection').innerHTML = '<div class="text-center text-xl p-8 text-red-600 dark:text-red-400">⚠️ خطأ في التهيئة! إعدادات Firebase مفقودة. ⚠️</div>';
+            // Throwing an error to stop execution when config is severely broken
+            throw new Error("Firebase config missing.");
+        }
+        
+        const app = initializeApp(firebaseConfig);
+        
+        let firebaseDb = getFirestore(app);
+        let firebaseAuth = getAuth(app); 
+        
+        // =========================================================================
 
-        // Firebase Initialization
-        let app, db, auth;
         let userId = null; // Will be set after auth completes
         let isAuthReady = false;
 
+        // ⭐️⭐️ المسار الإجباري للمجموعة العامة في Firestore ⭐️⭐️
+        const collectionPath = `artifacts/${appId}/public/data/public_bookings`;
+
         // -----------------------------------------------------------
-        // FIX 1: Expose Firebase State and Firestore Functions Globals for Main Script Access
+        // Expose Firebase State and Firestore Functions Globals for Main Script Access
         // -----------------------------------------------------------
-        window.appId = appId;
-        window.getDb = () => db;
-        window.getAuth = () => auth;
+        window.getDb = () => firebaseDb; 
+        window.getAuth = () => firebaseAuth; 
         window.getUserId = () => userId;
         window.getIsAuthReady = () => isAuthReady;
+        window.getAppId = () => appId; // ⭐️ تعريض appId
         
         // Expose critical Firestore functions to the global scope (window)
         window.doc = doc;
@@ -66,11 +85,13 @@
         window.startRealtimeSync = function() {
             // التأكد من أن Firestore مهيأ وجاهز
             if (!window.getDb() || !window.getIsAuthReady()) {
+                // إذا لم تكن جاهزة، نخرج بصمت.
                 return; 
             }
             
             // تعريف المرجع للمجموعة العامة للحجوزات (تستخدم collection المستوردة مباشرة)
-            const employeeBookingsRef = collection(window.getDb(), "artifacts", window.appId, "public", "data", "employee_bookings");
+            // ⭐️ استخدام المسار الإجباري
+            const employeeBookingsRef = collection(window.getDb(), collectionPath);
 
             // نستخدم onSnapshot من Firestore للاستماع للتغييرات في الوقت الفعلي
             onSnapshot(employeeBookingsRef, (snapshot) => {
@@ -99,29 +120,34 @@
 
             }, (error) => {
                 console.error("Firestore read failed: " + error.message);
-                window.showNotification("فشل في تحميل جدول الحجوزات: " + error.message, 'error');
+                // إشعار خطأ فقط إذا لم يكن الخطأ بسبب عدم التهيئة
+                if (!error.message.includes("is not initialized")) {
+                    window.showNotification("فشل في تحميل جدول الحجوزات: " + error.message, 'error');
+                }
             });
         };
         // -----------------------------------------------------------
 
         try {
-            if (Object.keys(firebaseConfig).length > 0) {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // 1. Authenticate the user
-                if (initialAuthToken) {
-                    signInWithCustomToken(auth, initialAuthToken).catch(error => {
-                        console.error("Error signing in with custom token:", error);
-                        signInAnonymously(auth); // Fallback to anonymous sign-in
-                    });
-                } else {
-                    signInAnonymously(auth);
+            // ⭐️⭐️ التعديل 2: استخدام initialAuthToken للمصادقة ⭐️⭐️
+            async function authenticateAndSetup() {
+                 try {
+                    if (initialAuthToken) {
+                        // استخدام الرمز المخصص إذا كان متوفراً
+                        await signInWithCustomToken(firebaseAuth, initialAuthToken);
+                        console.log("Signed in with Custom Token.");
+                    } else { 
+                        // المصادقة المجهولة كخيار احتياطي
+                        await signInAnonymously(firebaseAuth);
+                        console.log("Signed in Anonymously.");
+                    }
+                } catch(error) {
+                    console.error("Error during Firebase sign-in:", error);
+                    window.showNotification(`فشل في المصادقة: ${error.message}`, 'error');
                 }
 
                 // 2. Auth State Listener
-                onAuthStateChanged(auth, (user) => {
+                onAuthStateChanged(firebaseAuth, (user) => {
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
@@ -131,12 +157,13 @@
                     } else {
                         userId = null;
                         isAuthReady = true;
-                        console.log("Firebase Auth Ready: Anonymous/Unauthenticated.");
+                        console.log("Firebase Auth Ready: No user logged in.");
                     }
                 });
-            } else {
-                console.warn("Firebase configuration is missing. The app will run in read-only/no-storage mode.");
             }
+            
+            authenticateAndSetup(); // بدء عملية المصادقة
+
         } catch (e) {
             console.error("Failed to initialize Firebase:", e);
         }
@@ -500,8 +527,6 @@
             return endString;
         }
         
-        // ******* التعديل الحاسم: استهداف document.body لضمان عمل Tailwind CSS *******
-        
         /**
          * تحديث حالة الثيم (dark/light) في localStorage وعلى عنصر <body>.
          * وتحديث أيقونة التبديل.
@@ -519,11 +544,6 @@
                 localStorage.setItem('theme', 'light');
             }
             
-            // ⭐️⭐️ أداة التشخيص المحدثة ⭐️⭐️
-            console.log(`Theme updated to: ${mode}. Body element now has class 'dark': ${targetElement.classList.contains('dark')}`);
-
-
-            // التأكد من استهداف العنصر الأصلي (i) لتحديث data-feather
             const iconEl = document.getElementById('themeIcon');
             if (iconEl) {
                 iconEl.setAttribute('data-feather', newIcon);
@@ -540,7 +560,7 @@
         }
         
         /**
-         * تبديل الوضع الحالي (dark <-> light).
+         * تبديل الوضع الحالي (dark <-> light)
          */
         function toggleTheme() {
             const targetElement = document.body;
@@ -599,24 +619,23 @@
          */
         async function saveEmployeeBooking(employeeData) {
             const db = window.getDb();
-            const appId = window.appId;
             
-            if (!db) {
-                showNotification('لم يتم تهيئة قاعدة البيانات.', 'error');
+            if (!db || !window.getIsAuthReady()) {
+                showNotification('لم يتم تهيئة قاعدة البيانات أو المصادقة لم تكتمل.', 'error');
                 return;
             }
             
+            // ⭐️⭐️ استخدام المسار الإجباري ⭐️⭐️
+            const collectionPath = 'artifacts/' + window.getAppId() + '/public/data/public_bookings';
+
             // إنشاء Doc ID فريد (مثلاً: "Ahmed_morning" أو "Layla_evening")
             const docId = `${employeeData.name.replace(/[^a-zA-Z0-9]/g, '')}_${employeeData.shift}`;
             
-            // FIX 2: استخدام window.doc للوصول إلى دالة doc
-            const docRef = window.doc(db, "artifacts", appId, "public", "data", "employee_bookings", docId);
+            const docRef = window.doc(db, collectionPath, docId);
 
             try {
-                // FIX 3: استخدام window.setDoc للوصول إلى دالة setDoc
                 await window.setDoc(docRef, employeeData, { merge: true }); 
                 console.log(`Booking for ${employeeData.name} saved successfully with ID: ${docId}`);
-                // لا حاجة لإظهار إشعار نجاح هنا، سيتم إظهاره بعد إتمام عملية الحجز في confirmReservation
             } catch (error) {
                 console.error("Error saving booking: ", error);
                 showNotification('حدث خطأ في حفظ الحجز على السحابة.', 'error');
@@ -632,16 +651,14 @@
          */
         async function clearAllBookings() {
             const db = window.getDb();
-            const appId = window.appId;
 
-            if (!db) {
-                showNotification('لم يتم تهيئة قاعدة البيانات.', 'error');
+            if (!db || !window.getIsAuthReady()) {
+                 showNotification('لم يتم تهيئة قاعدة البيانات أو المصادقة لم تكتمل.', 'error');
                 return;
             }
 
-            // بديل لـ window.confirm()
+            // استخدام نافذة الإدارة كرسالة تأكيد مؤقتة
             const isConfirmed = await new Promise(resolve => {
-                // استخدام نافذة الإدارة كرسالة تأكيد مؤقتة
                 const modal = document.getElementById('adminModal');
                 const originalContent = adminStep2.innerHTML;
                 
@@ -658,13 +675,11 @@
 
                 document.getElementById('confirmClear').onclick = () => {
                     adminStep2.innerHTML = originalContent;
-                    adminStep1.classList.remove('hidden');
-                    // إعادة إظهار محتوى الخطوة الثانية الأصلي وضمان إخفاء الخطوة الأولى
+                    adminStep1.classList.add('hidden');
                     renderAdminStep2(originalContent);
                     resolve(true);
                 };
                 document.getElementById('cancelClear').onclick = () => {
-                    // إعادة إظهار محتوى الخطوة الثانية الأصلي وضمان إخفاء الخطوة الأولى
                     renderAdminStep2(originalContent);
                     resolve(false);
                 };
@@ -681,9 +696,10 @@
                 return;
             }
             
-            // FIX 4: استخدام الدوال المعروضة عالمياً (window.collection, window.getDocs, window.deleteDoc)
             try {
-                const employeeBookingsRef = window.collection(db, "artifacts", appId, "public", "data", "employee_bookings");
+                // ⭐️ استخدام المسار الإجباري
+                const collectionPath = 'artifacts/' + window.getAppId() + '/public/data/public_bookings';
+                const employeeBookingsRef = window.collection(db, collectionPath);
                 const snapshot = await window.getDocs(employeeBookingsRef);
                 
                 if (snapshot.docs.length === 0) {
@@ -710,8 +726,10 @@
          */
         async function deleteEmployeeFullRecord() {
             const db = window.getDb();
-            const appId = window.appId;
-            if (!db) return showNotification('لم يتم تهيئة قاعدة البيانات.', 'error');
+            if (!db || !window.getIsAuthReady()) {
+                 showNotification('لم يتم تهيئة قاعدة البيانات أو المصادقة لم تكتمل.', 'error');
+                return;
+            }
             
             const nameToDelete = deleteEmployeeName.value.trim();
 
@@ -762,10 +780,12 @@
             if (!isConfirmed) {
                 return;
             }
+            
+            // ⭐️⭐️ استخدام المسار الإجباري ⭐️⭐️
+            const collectionPath = 'artifacts/' + window.getAppId() + '/public/data/public_bookings';
 
-            // FIX 5: استخدام window.doc للوصول إلى المستندات
-            const docRefMorning = window.doc(db, "artifacts", appId, "public", "data", "employee_bookings", docIdMorning);
-            const docRefEvening = window.doc(db, "artifacts", appId, "public", "data", "employee_bookings", docIdEvening);
+            const docRefMorning = window.doc(db, collectionPath, docIdMorning);
+            const docRefEvening = window.doc(db, collectionPath, docIdEvening);
 
             try {
                 // FIX 6: استخدام window.deleteDoc للحذف
@@ -792,9 +812,11 @@
          */
         async function deleteSingleBreak() {
             const db = window.getDb();
-            const appId = window.appId;
 
-            if (!db) return showNotification('لم يتم تهيئة قاعدة البيانات.', 'error');
+            if (!db || !window.getIsAuthReady()) {
+                 showNotification('لم يتم تهيئة قاعدة البيانات أو المصادقة لم تكتمل.', 'error');
+                return;
+            }
 
             const name = deleteBreakName.value.trim();
             const indexStr = deleteBreakIndex.value.trim();
@@ -875,8 +897,10 @@
             // 2. تحديث المستند في Firestore
             const docId = `${employeeRecord.name.replace(/[^a-zA-Z0-9]/g, '')}_${employeeRecord.shift}`;
             
-            // FIX 7: استخدام window.doc و window.setDoc و window.deleteDoc
-            const docRef = window.doc(db, "artifacts", appId, "public", "data", "employee_bookings", docId);
+            // ⭐️⭐️ استخدام المسار الإجباري ⭐️⭐️
+            const collectionPath = 'artifacts/' + window.getAppId() + '/public/data/public_bookings';
+
+            const docRef = window.doc(db, collectionPath, docId);
 
             try {
                 if (newBreaks.length === 0) {
@@ -903,7 +927,6 @@
         // وظائف رئيسية
         // ---------------------------------------------------------------------
  
-        // ⭐️⭐️⭐️ تم حذف دالة window.deleteEmployeeBreak التي كانت مرتبطة بالجدول ⭐️⭐️⭐️
         
         function selectShift(shift) {
             window.selectedShift = selectedShift = shift; // جعل المتغير global للوصول إليه في startRealtimeSync
