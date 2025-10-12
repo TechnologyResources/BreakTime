@@ -91,7 +91,7 @@
         // Expose Firebase State and Firestore Functions Globals for Main Script Access
         // -----------------------------------------------------------
         window.getDb = () => firebaseDb; 
-        window.getAuth = () => firebaseAuth; 
+        window.getAuth().signInAnonymously() 
         window.getUserId = () => userId;
         window.getIsAuthReady = () => isAuthReady;
         window.getAppId = () => appId; 
