@@ -64,7 +64,7 @@
 </style>
     <link rel="icon" href="images/favicon.png" type="image/png" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght @.npm/_cacache/index-v5/04/d9/1e016c3ad682f0898d1dc2d31b1cf820e24008063524d8edf04fdd3eea16;700;800&family=Tajawal:wght[400..900]&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     
     <style>
         /* =========================================================================
@@ -210,8 +210,8 @@
 
         /**
          * دالة مساعدة لتحويل وقت 12 ساعة (ص/م) إلى كائن Date لغرض المقارنة الزمنية والفرز.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} timeStrWithPeriod - سلسلة نصية للوقت (مثال: '01:30 م').
-         * * @returns {Date} - كائن Date يمثل الوقت في نفس يوم اليوم.
+         * @param {string} timeStrWithPeriod - سلسلة نصية للوقت (مثال: '01:30 م').
+         * @returns {Date} - كائن Date يمثل الوقت في نفس يوم اليوم.
          */
         function timeToDate(timeStrWithPeriod) {
             const today = new Date();
@@ -229,9 +229,9 @@
 
         /**
          * دالة لحساب وقت نهاية البريك بعد إضافة المدة.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} startTime - وقت البدء (مثال: '01:30 م').
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {number} duration - المدة بالدقائق (15 أو 30).
-         * * @returns {string} - وقت الانتهاء بتنسيق 12 ساعة (مثال: '01:45 م').
+         * @param {string} startTime - وقت البدء (مثال: '01:30 م').
+         * @param {number} duration - المدة بالدقائق (15 أو 30).
+         * @returns {string} - وقت الانتهاء بتنسيق 12 ساعة (مثال: '01:45 م').
          */
         function getBreakEndString(startTime, duration) {
             const startDate = timeToDate(startTime);
@@ -248,8 +248,8 @@
 
         /**
          * تنسيق فرق الوقت بالمللي ثانية إلى (ساعات:دقائق:ثواني) لعرض المؤقتات.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {number} ms - فرق الوقت بالمللي ثانية.
-         * * @returns {string} - فرق الوقت المنسق (مثال: 1 س 30 د 15 ث).
+         * @param {number} ms - فرق الوقت بالمللي ثانية.
+         * @returns {string} - فرق الوقت المنسق (مثال: 1 س 30 د 15 ث).
          */
         function formatTimeDifference(ms) {
             const seconds = Math.floor(ms / 1000);
@@ -269,8 +269,8 @@
         
         /**
          * عرض رسالة إشعار مؤقتة للمستخدم في شريط الإشعارات العلوي.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} message - نص الإشعار.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} type - نوع الإشعار ('success', 'error', 'info', 'warning').
+         * @param {string} message - نص الإشعار.
+         * @param {string} type - نوع الإشعار ('success', 'error', 'info', 'warning').
          */
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
@@ -295,7 +295,7 @@
       
         /**
          * توليد سلسلة نصية بتاريخ اليوم بصيغة YYYY-MM-DD.
-         * * @returns {string} - التاريخ الحالي بصيغة (مثال: "2025-10-13").
+         * @returns {string} - التاريخ الحالي بصيغة (مثال: "2025-10-13").
          */
         function getTodayDateString() {
             const today = new Date();
@@ -312,8 +312,8 @@
 
         /**
          * توليد فترات البريك المتاحة لنظام الوردية (صباحي/مسائي) ضمن نطاق زمني محدد.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {number} startHour - ساعة بداية الحجز (تنسيق 24 ساعة).
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {number} endHour - ساعة نهاية الحجز (تنسيق 24 ساعة).
+         * @param {number} startHour - ساعة بداية الحجز (تنسيق 24 ساعة).
+         * @param {number} endHour - ساعة نهاية الحجز (تنسيق 24 ساعة).
          */
         const generateBreakTimes = (startHour, endHour) => {
             const slots = [];
@@ -381,7 +381,7 @@
         
         /**
          * دالة لحفظ أو تحديث حجز موظف في Firestore.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {object} employeeData - بيانات حجز الموظف.
+         * @param {object} employeeData - بيانات حجز الموظف.
          */
         async function saveEmployeeBooking(employeeData) {
             const db = window.getDb();
@@ -424,7 +424,7 @@
         
         /**
          * بناء مسار المجموعة (Collection Path) بناءً على القسم المختار.
-         * * @returns {string} - المسار في Firestore (مثال: bookings/sms/employees).
+         * @returns {string} - المسار في Firestore (مثال: bookings/sms/employees).
          */
         window.getCollectionPath = (group = window.selectedGroup) => {
             if (!group) return null;
@@ -434,8 +434,8 @@
 
         /**
          * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore للقسم المحدد.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} targetGroup - القسم الذي نريد مزامنة بياناته.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {boolean} updateUI - هل يجب تحديث الواجهة بعد المزامنة؟
+         * @param {string} targetGroup - القسم الذي نريد مزامنة بياناته.
+         * @param {boolean} updateUI - هل يجب تحديث الواجهة بعد المزامنة؟
          */
         window.startRealtimeSync = function(targetGroup, updateUI = true) {
             if (window.firestoreUnsubscribe) {
@@ -476,50 +476,10 @@
             });
         };
         
-      
-      
-      
-      /**
- * تتحقق مما إذا كان حجز جديد يتعارض مع حجز موجود في قسم محظور (CHAT ضد SMS).
- * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} newGroup - اسم قسم الموظف الجديد الذي يحاول الحجز.
- * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} newTime - وقت بدء البريك الجديد (مثلاً '01:00').
- * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {number} newDuration - مدة البريك الجديد (15 أو 30).
- * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {Array<object>} allEmployees - قائمة جميع الموظفين وحجوزاتهم لهذا اليوم.
- * @returns {boolean} - true إذا كان الحجز مسموحاً، false إذا كان هناك تعارض.
- */
-function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
-    const groupToCheck = newGroup.toUpperCase();
-
-    // 1. تحديد القسم الآخر المقيد
-    let restrictedGroup = null;
-    if (groupToCheck === 'CHAT') {
-        restrictedGroup = 'SMS';
-    } else if (groupToCheck === 'SMS') {
-        restrictedGroup = 'CHAT';
-    } else {
-        // إذا كان القسم الجديد ليس CHAT ولا SMS، لا يوجد قيود.
-        return true; 
-    }
-    
-    // 2. التحقق من وجود تعارض مع القسم المقيد الآخر
-    const overlapExists = allEmployees.some(emp => {
-        // هل هذا الموظف ينتمي للقسم المقيد الآخر؟
-        if (emp.group.toUpperCase() === restrictedGroup) {
-            // هل لديه بريك مطابق للوقت والمدة المطلوبة؟
-            return emp.breaks.some(existingBreak => 
-                existingBreak.time === newTime && existingBreak.duration === newDuration
-            );
-        }
-        return false;
-    });
-
-    // إذا لم يوجد تداخل (overlapExists = false)، فالحجز مسموح (نرجع true)
-    return !overlapExists;
-}
         /**
          * دالة لحذف حجز موظف معين لليوم الحالي (تستخدم في لوحة الإدارة).
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} employeeName - اسم الموظف.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} shift - الوردية.
+         * @param {string} employeeName - اسم الموظف.
+         * @param {string} shift - الوردية.
          */
         window.deleteEmployeeBookings = async function(employeeName, shift) {
             const db = window.getDb();
@@ -592,6 +552,9 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
          * إظهار واجهة اختيار القسم وإخفاء الواجهات الأخرى.
          */
         window.showGroupSelection = function() {
+            if (window.firestoreUnsubscribe) {
+                window.firestoreUnsubscribe(); 
+            }
             [groupSelection, myBookingsSection, shiftSelection, breakSelection, scheduleDisplay].forEach(el => el.classList.add('hidden'));
             groupSelection.classList.remove('hidden');
         }
@@ -707,7 +670,7 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
 
         /**
          * اختيار الوردية (صباحي/مسائي/24 ساعة).
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} shift - الوردية المراد اختيارها.
+         * @param {string} shift - الوردية المراد اختيارها.
          */
         window.selectShift = function(shift) {
             
@@ -910,8 +873,8 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
             });
         }        /**
          * التحقق من التسلسل الزمني الصحيح للبريكات المختارة (عدم التداخل).
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {Array<object>} tempBreaks - قائمة البريكات المراد فحصها.
-         * * @returns {boolean} - true إذا كان التسلسل الزمني صحيحاً، false خلاف ذلك.
+         * @param {Array<object>} tempBreaks - قائمة البريكات المراد فحصها.
+         * @returns {boolean} - true إذا كان التسلسل الزمني صحيحاً، false خلاف ذلك.
          */
         function isSelectionTimeOrderCorrect(tempBreaks) {
             const sortedBreaks = [...tempBreaks].sort((a, b) => timeToDate(a.time) - timeToDate(b.time));
@@ -933,8 +896,8 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
 
         /**
          * التعامل مع اختيار/إلغاء اختيار فترة بريك بمرونة
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {string} slotStartTime - وقت بدء البريك.
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {number} duration - مدة البريك بالدقائق.
+         * @param {string} slotStartTime - وقت بدء البريك.
+         * @param {number} duration - مدة البريك بالدقائق.
          */
         function toggleBreakSelection(slotStartTime, duration) {
             const index = selectedBreaks.findIndex(b => b.time === slotStartTime && b.duration === duration);
@@ -1197,53 +1160,43 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
         
         /**
          * توليد وعرض جدول الحجوزات الخاصة بقسم محدد (من بيانات المزامنة الجديدة).
-         * * @.cache/node-gyp/22.20.0/include/node/openssl/archs/aix64-gcc-as/asm_avx2/include/internal/param_names.h {Array<object>} fetchedEmployees - قائمة الموظفين المُجلبة حديثاً.
+         * @param {Array<object>} fetchedEmployees - قائمة الموظفين المُجلبة حديثاً.
          */
         function renderMyBookingsSchedule(fetchedEmployees) {
             const group = myBookingsGroupNameInput.value.trim().toUpperCase();
-            const employee = myBookingsEmployeeNameInput.value.trim().toUpperCase();
-            
-            // 1. تصفية الحجوزات حسب القسم أولاً
-            const filteredEmployees = fetchedEmployees.filter(emp => emp.group.toUpperCase() === group);
+            const employeeName = myBookingsEmployeeNameInput.value.trim().toUpperCase();
 
-            // 2. التحقق الصارم: البحث عن حجز يطابق اسم الموظف تماماً في هذا القسم
-            const userBooking = filteredEmployees.find(emp => emp.name.toUpperCase() === employee);
-            
-            // ⭐️⭐️ منطق التحقق الصارم الجديد ⭐️⭐️
+            // The `fetchedEmployees` array is already scoped to the correct group by the Firestore query.
+            // We just need to find the specific employee by name.
+            const userBooking = fetchedEmployees.find(emp => emp.name && emp.name.toUpperCase() === employeeName);
+
             if (!userBooking) {
-                // إذا لم يتم العثور على تطابق تام (القسم صحيح، لكن الاسم غير صحيح أو لا يوجد حجز باسمه)
-                myBookingsStatus.textContent = `❌ لم يتم العثور على أي حجز مطابق لـ **${employee}** في قسم **${group}** لهذا اليوم.`;
+                myBookingsStatus.textContent = `❌ لم يتم العثور على أي حجز مطابق لـ **${employeeName}** في قسم **${group}** لهذا اليوم.`;
                 myBookingsListContainer.innerHTML = '';
-                return; // ⬅️ **نقطة الإيقاف هنا لمنع عرض أي شيء إذا كان الاسم خاطئاً.**
+                return;
             }
 
-            // 3. إذا وجد الحجز (التحقق نجح)، استمر في عرض الجدول
-            
-            let userStatusHtml = '';
-            // يتم عرض رسالة النجاح الخاصة بالمستخدم فقط، لا داعي للتحقق مجدداً
-            userStatusHtml = `
+            // If the booking is found, proceed with rendering the table for all employees in the group.
+            let userStatusHtml = `
                 <div class="bg-indigo-50 dark:bg-indigo-900/50 p-3 rounded-lg border border-indigo-300 dark:border-indigo-700 mb-4 text-center">
                     <p class="font-bold text-lg text-primary-indigo dark:text-indigo-300">✅ تم العثور على حجزك المطابق لـ **${userBooking.name}**.</p>
                 </div>
             `;
+
+            myBookingsStatus.textContent = `جدول حجوزات قسم ${group} اليوم (${fetchedEmployees.length} موظف):`;
             
-            // إعادة استخدام دالة إنشاء الجدول الرئيسية لعرض بيانات القسم
-            myBookingsStatus.textContent = `جدول حجوزات قسم ${group} اليوم (${filteredEmployees.length} موظف):`;
-            
-            // فرز الحجوزات حسب وقت البدء
-            filteredEmployees.sort((a, b) => {
-                // يجب التأكد من وجود دالة timeToDate في بقية الكود للعمل بشكل صحيح
+            // Sort employees by their first break time
+            const sortedEmployees = [...fetchedEmployees].sort((a, b) => {
                 const timeA = a.breaks && a.breaks.length > 0 ? timeToDate(a.breaks[0].time) : new Date(0);
                 const timeB = b.breaks && b.breaks.length > 0 ? timeToDate(b.breaks[0].time) : new Date(0);
                 return timeA - timeB;
             });
             
-            const tableContent = filteredEmployees.map((emp, index) => {
+            const tableContent = sortedEmployees.map((emp, index) => {
                 const rowClass = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
-                const isUser = emp.name.toUpperCase() === employee;
+                const isUser = emp.name.toUpperCase() === employeeName;
                 
                 const breaksText = emp.breaks.map(b => {
-                    // يجب التأكد من وجود دالة getBreakEndString في بقية الكود
                     const end = window.getBreakEndString ? getBreakEndString(b.time, b.duration) : ''; 
                     return `${b.time}${end ? ' - ' + end : ''} (${b.duration}د)`;
                 }).join(' | ');
@@ -1259,7 +1212,6 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
                 `;
             }).join('');
             
-            // بناء الجدول النهائي
             myBookingsListContainer.innerHTML = `
                 ${userStatusHtml}
                 <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
@@ -1273,7 +1225,7 @@ function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
                     </div>
                 </div>
             `;
-            // ملاحظة: تأكد من أن feather.replace() موجودة في بقية الكود
+
             if (window.feather && window.feather.replace) {
                 window.feather.replace();
             }
