@@ -148,7 +148,7 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
         import { 
             getFirestore, collection, doc, setDoc, deleteDoc, 
-            query, where, onSnapshot, serverTimestamp 
+            query, where, onSnapshot, serverTimestamp, orderBy 
         } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
         
         // استيراد مكتبة الأيقونات (Feather Icons)
@@ -447,7 +447,7 @@
             
             const collectionRef = collection(db, path);
             const todayDateString = getTodayDateString();
-            const q = query(collectionRef, where("date", "==", todayDateString));
+            const q = query(collectionRef, where("date", "==", todayDateString), orderBy("timestamp", "asc"));
 
             window.firestoreUnsubscribe = onSnapshot(q, (snapshot) => {
                 employees = [];
@@ -1063,12 +1063,7 @@
                 return;
             }
             
-            filteredEmployees.sort((a, b) => {
-                const timeA = a.breaks && a.breaks.length > 0 ? timeToDate(a.breaks[0].time) : new Date(0);
-                const timeB = b.breaks && b.breaks.length > 0 ? timeToDate(b.breaks[0].time) : new Date(0);
-                return timeA - timeB;
-            });
-            
+            // Data is now sorted by Firestore, no need for client-side sorting.
             scheduleContent.innerHTML = filteredEmployees.map((emp, index) => {
                 const rowClass = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
                 
@@ -1185,14 +1180,8 @@
 
             myBookingsStatus.textContent = `جدول حجوزات قسم ${group} اليوم (${fetchedEmployees.length} موظف):`;
             
-            // Sort employees by their first break time
-            const sortedEmployees = [...fetchedEmployees].sort((a, b) => {
-                const timeA = a.breaks && a.breaks.length > 0 ? timeToDate(a.breaks[0].time) : new Date(0);
-                const timeB = b.breaks && b.breaks.length > 0 ? timeToDate(b.breaks[0].time) : new Date(0);
-                return timeA - timeB;
-            });
-            
-            const tableContent = sortedEmployees.map((emp, index) => {
+            // Data is now sorted by Firestore, no need for client-side sorting.
+            const tableContent = fetchedEmployees.map((emp, index) => {
                 const rowClass = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
                 const isUser = emp.name.toUpperCase() === employeeName;
                 
