@@ -140,40 +140,46 @@
     <script type="module">
         
         // =========================================================================
-        //  Firebase Service Configuration and Initialization (جزء أساسي لإدارة البيانات)
+        //  Firebase Service Configuration and Initialization
         // =========================================================================
         
-        // استيراد المكتبات الأساسية من Firebase Firestore (قاعدة بيانات الوقت الفعلي)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
         import { 
-            getFirestore, collection, doc, setDoc, deleteDoc, 
+            getFirestore, collection, doc, setDoc, getDoc, deleteDoc, 
             query, where, onSnapshot, serverTimestamp 
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
         
-        // استيراد مكتبة الأيقونات (Feather Icons)
         import "https://unpkg.com/feather-icons";
 
         // *************************************************************************
-        // ** ملاحظة هامة: يجب استبدال هذه الإعدادات ببيانات مشروعك الحقيقية على Firebase **
+        // ** الخطوة الأهم: الصق هنا إعدادات مشروعك الحقيقية من Firebase **
         // *************************************************************************
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
-        };
+        // ١. اذهب إلى موقع Firebase وأنشئ مشروعاً جديداً.
+        // ٢. أضف تطبيق ويب (Web App) جديداً.
+        // ٣. انسخ كود `firebaseConfig` الذي سيظهر لك والصقه هنا بالأسفل بدلاً من هذا المثال.
+        
+  const firebaseConfig = {
+    apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
+    authDomain: "breaktime-8e28a.firebaseapp.com",
+    databaseURL: "https://breaktime-8e28a-default-rtdb.firebaseio.com",
+    projectId: "breaktime-8e28a",
+    storageBucket: "breaktime-8e28a.firebasestorage.app",
+    messagingSenderId: "653808445317",
+    appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
+    measurementId: "G-077KHT3Y1L"
+  };
 
-        const app = initializeApp(firebaseConfig); // تهيئة التطبيق
-        const db = getFirestore(app); // الحصول على مرجع قاعدة البيانات
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 
-        // جعل وظائف Firebase متاحة عالمياً للاستخدام في كود الـ <script> العادي
+        // Make Firebase functions globally available
         window.getDb = () => db;
         window.collection = collection;
         window.doc = doc;
         window.setDoc = setDoc;
+        window.getDoc = getDoc;
         window.deleteDoc = deleteDoc;
         window.query = query;
         window.where = where;
