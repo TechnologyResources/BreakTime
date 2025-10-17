@@ -1,1794 +1,781 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Break Time Buddy - جدول حجز البريكات للأقسام</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script>
-        // =========================================================================
-        //                 إعدادات Tailwind CSS المخصصة (Configuration)
-        // =========================================================================
-        // تحديد الثيمات والألوان الأساسية التي سيتم استخدامها في التصميم
-        tailwind.config = {
-            darkMode: 'class', // تفعيل الوضع الداكن بناءً على الكلاس 'dark' في عنصر <html>
-            theme: {
-                extend: {
-                    // تعريف ألوان مخصصة للنظام لسهولة تغيير الثيم
-                    colors: {
-                        'primary-indigo': '#4f46e5',   // اللون الأساسي: أزرق نيلي
-                        'secondary-green': '#10b981', // اللون الثانوي: أخضر لعمليات النجاح والحجز المتاح
-                        'danger-red': '#ef4444',      // لون الخطر: أحمر لعمليات الحذف أو الأخطاء
-                        'gold-star': '#facc15',       // لون الذهب: للتنبيهات والتحذيرات
-                        'light-blue': '#3b82f6',      // لون أزرق فاتح: للمعلومات والحالة
-                    }
-                }
-            }
-        }
-    </script>
-  <style>
-    /*
-     * خلفية نمط متكرر لكامل الصفحة
-     * تم تعديل المحدد من .container إلى body ليكون خلفية عامة
-     */
-    body {
-        /* إزالة أي هوامش افتراضية وضمان تغطية كاملة لارتفاع الشاشة */
-        margin: 0;
-        min-height: 100vh;
-        /* الخصائص الأساسية للنمط */
-        --s: 200px;
-        --c1: #1d1d1d;
-        --c2: #4e4f51;
-        --c3: #3c3c3c;
-
-        /* تطبيق نمط الخلفية */
-        background:
-            repeating-conic-gradient(
-                from 30deg,
-                #0000 90deg 120deg,
-                var(--c3) 0deg 180deg
-            )
-            calc(0.5 * var(--s)) calc(0.5 * var(--s) * 0.577),
-            repeating-conic-gradient(
-                from 30deg,
-                var(--c1) 0deg 60deg,
-                var(--c2) 0deg 120deg,
-                var(--c3) 0deg 180deg
-            );
-        background-size: var(--s) calc(var(--s) * 0.577);
-        /* تثبيت الخلفية عند التمرير */
-        background-attachment: fixed;
-    }
-</style>
-    <link rel="icon" href="images/favicon.png" type="image/png" />
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Tajawal:wght[400..900]&display=swap" rel="stylesheet">
-    
+  <head>
+    <meta charset="UTF-8" />
+    <title>الموقع تحت التطوير</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        /* =========================================================================
-                           الأنماط الأساسية والمخصصة (Custom Styles)
-           ========================================================================= */
-        body {
-            font-family: 'Tajawal', 'Inter', sans-serif; // تطبيق الخط العربي الأساسي
-            background-color: #f7f9fb; // خلفية فاتحة موحدة للوضع العادي
-            color: #1f2937; // لون نص أساسي
-            transition: background-color 0.3s, color 0.3s; // انتقالات سلسة عند تغيير الوضع
-        }
-        /* أنماط الوضع الداكن */
-        .dark body {
-            background-color: #0f172a; // خلفية داكنة
-            color: #f9fafb; // نص فاتح
-        }
-        /* إخفاء شريط التمرير (Scrollbar) في حاويات البريكات */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* إخفاء في متصفحات IE و Edge */
-            scrollbar-width: none;  /* إخفاء في متصفح Firefox */
-        }
-        /* تصميم زر البريك المختار */
-        .time-slot.selected {
-            transform: scale(1.03); // تكبير طفيف عند الاختيار لتعزيز التغذية الراجعة البصرية
-            transition: transform 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-        }
-        /* حركة بسيطة للإشعارات */
-        .notification.show {
-            animation: fadeInOut 5s ease-in-out forwards;
-        }
-        /* تعريف الحركة: ظهور، ثبات، ثم اختفاء */
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px) translateX(-50%); }
-            10% { opacity: 1; transform: translateY(0) translateX(-50%); }
-            90% { opacity: 1; transform: translateY(0) translateX(-50%); }
-            100% { opacity: 0; transform: translateY(-20px) translateX(-50%); }
-        }
-        
-        /* ⭐️ النمط الجديد: ضبابية الوردية غير المسموح بها */
-        .shift-card.disabled-fog {
-            opacity: 0.5; /* تطبيق الضبابية */
-            pointer-events: none; /* تعطيل النقر تماماً */
-            filter: grayscale(100%); /* تحويل للرمادي لتمييزها بصرياً */
-        }
-        
-        /* ⭐️⭐️ تنسيق زر العودة المطلوب ⭐️⭐️ */
-        .back-button-style {
-            background-color: #fee2e2; /* bg-red-100 */
-            color: #dc2626; /* text-red-600 */
-            border: 2px solid #f87171; /* border-red-400 */
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1), 0 2px 4px -2px rgba(239, 68, 68, 0.06);
-        }
-        .dark .back-button-style {
-            background-color: #450a0a; /* dark:bg-red-950 */
-            color: #fca5a5; /* dark:text-red-300 */
-            border: 2px solid #7f1d1d; /* dark:border-red-800 */
-        }
-        .back-button-style:hover {
-            background-color: #fecaca; /* hover:bg-red-200 */
-            transform: translateY(-1px);
-        }
-        .dark .back-button-style:hover {
-            background-color: #641d1d; /* dark:hover:bg-red-900 */
-        }
+      *, *::before, *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        min-height: 100vh;
+        font-family: "Tajawal", sans-serif;
+        background: linear-gradient(
+            rgba(0, 0, 0, 0.5),
+            rgba(0, 0, 0, 0.5)
+          ),
+          url("https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1950&q=80")
+            no-repeat center center/cover;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+      .container {
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 15px;
+        padding: 20px 30px;
+        max-width: 700px;
+        width: 100%;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+      }
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      p {
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      #timer {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 25px;
+        text-align: center;
+      }
 
+      /* Tabs style */
+      .tabs {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+      .tab {
+        padding: 10px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+        background: #222;
+        color: #eee;
+        font-weight: bold;
+        user-select: none;
+        transition: background 0.3s ease;
+      }
+      .tab.active,
+      .tab:hover {
+        background: #ff9800;
+        color: #111;
+      }
+
+      /* Games container */
+      .game {
+        display: none;
+      }
+      .game.active {
+        display: block;
+      }
+
+      /* XO Game */
+      #xoBoard {
+        display: grid;
+        grid-template-columns: repeat(3, 80px);
+        grid-template-rows: repeat(3, 80px);
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+      .xoCell {
+        background: #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 2.8rem;
+        cursor: pointer;
+        border-radius: 10px;
+        user-select: none;
+        transition: background 0.3s ease;
+      }
+      .xoCell:hover {
+        background: #ffb74d;
+      }
+      #xoStatus {
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+      #xoResetBtn {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        background: #ff9800;
+        color: #111;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      #xoResetBtn:hover {
+        background: #e67e22;
+      }
+
+      /* Memory Game */
+      #memoryBoard {
+        display: grid;
+        grid-template-columns: repeat(4, 80px);
+        grid-template-rows: repeat(3, 80px);
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+      .memoryCard {
+        background: #333;
+        border-radius: 12px;
+        font-size: 2.2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.3s ease;
+      }
+      .memoryCard.flipped {
+        background: #ff9800;
+        color: #111;
+        cursor: default;
+      }
+      #memoryStatus {
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        min-height: 24px;
+      }
+      #memoryResetBtn {
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        background: #ff9800;
+        color: #111;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      #memoryResetBtn:hover {
+        background: #e67e22;
+      }
+
+      /* Catch Game */
+      #catchGame {
+        position: relative;
+        width: 350px;
+        height: 250px;
+        background: #222;
+        border-radius: 15px;
+        margin: 0 auto 10px;
+        user-select: none;
+        overflow: hidden;
+      }
+      #catchBox {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        background: #ff9800;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      #catchScore {
+        text-align: center;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+      #catchResetBtn {
+        display: block;
+        margin: 0 auto;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        background: #ff9800;
+        color: #111;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      #catchResetBtn:hover {
+        background: #e67e22;
+      }
+
+      /* Dinosaur Game */
+      #dinoCanvas {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        display: block;
+        margin: 0 auto 10px;
+        user-select: none;
+      }
+      #dinoResetBtn {
+        display: block;
+        margin: 0 auto;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 8px;
+        background: #ff9800;
+        color: #111;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+      #dinoResetBtn:hover {
+        background: #e67e22;
+      }
     </style>
-    
-    <script type="module">
-        
-        // =========================================================================
-        //  Firebase Service Configuration and Initialization
-        // =========================================================================
-        
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
-        import { 
-            getFirestore, collection, doc, setDoc, getDoc, deleteDoc, 
-            query, where, onSnapshot, serverTimestamp 
-        } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
-        
-        import "https://unpkg.com/feather-icons";
-
-        // *************************************************************************
-        // ** الخطوة الأهم: الصق هنا إعدادات مشروعك الحقيقية من Firebase **
-        // *************************************************************************
-        // ١. اذهب إلى موقع Firebase وأنشئ مشروعاً جديداً.
-        // ٢. أضف تطبيق ويب (Web App) جديداً.
-        // ٣. انسخ كود `firebaseConfig` الذي سيظهر لك والصقه هنا بالأسفل بدلاً من هذا المثال.
-        
-  const firebaseConfig = {
-    apiKey: "AIzaSyARZtk0LhDVK6aj-C-aFcqzn7trBA_aZ9o",
-    authDomain: "breaktime-8e28a.firebaseapp.com",
-    databaseURL: "https://breaktime-8e28a-default-rtdb.firebaseio.com",
-    projectId: "breaktime-8e28a",
-    storageBucket: "breaktime-8e28a.firebasestorage.app",
-    messagingSenderId: "653808445317",
-    appId: "1:653808445317:web:55aa4a365b8fcf4ac246ec",
-    measurementId: "G-077KHT3Y1L"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
-        // Make Firebase functions globally available
-        window.getDb = () => db;
-        window.collection = collection;
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.getDoc = getDoc;
-        window.deleteDoc = deleteDoc;
-        window.query = query;
-        window.where = where;
-        window.serverTimestamp = serverTimestamp;
-
-        // *************************************************************************
-        // ********************** متغيرات الحالة العالمية (Global State) **********************
-        // *************************************************************************
-        
-        let employees = []; // قائمة الموظفين الذين قاموا بالحجز (يتم تحديثها عبر المزامنة السحابية)
-        let selectedBreaks = []; // قائمة البريكات التي يختارها المستخدم الحالي
-        let selectedShift = null; // الوردية المختارة ('morning', 'evening', '24hr')
-        window.selectedGroup = null; // القسم المختار ('SMS', 'CHAT', 'PORT OUT', 'SALES', 'CA03')
-        window.isAuthReady = false; // حالة جاهزية قاعدة البيانات بعد محاولة التهيئة
-        window.hasBooked = false; // حالة القفل: هل قام المستخدم بتأكيد حجز واحد في هذه الجلسة؟
-
-        // القواعد الأساسية لنظام العمل
-        // ⭐️ إضافة القسم الجديد 'CA03' ⭐️
-        const ALLOWED_GROUPS = ['SMS', 'PORT OUT', 'CHAT', 'SALES', 'CA03']; 
-        const MAX_TOTAL_BREAKS = 3; // الحد الأقصى لعدد البريكات المسموح بها
-        // الترتيب الإجباري للبريكات: 15 دقيقة، ثم 30 دقيقة (غداء)، ثم 15 دقيقة
-        const REQUIRED_ORDER = [15, 30, 15]; 
-        const ADMIN_CODE = '1234'; // كود إداري افتراضي للدخول
-
-        // مرجع لعملية إلغاء الاشتراك من Firestore (ضروري لإيقاف المزامنة عند تغيير القسم)
-        window.firestoreUnsubscribe = null;
-
-        // *************************************************************************
-        // ********************** وظائف المرافق (UTILITY FUNCTIONS) **********************
-        // *************************************************************************
-
-        /**
-         * دالة مساعدة لتحويل وقت 12 ساعة (ص/م) إلى كائن Date لغرض المقارنة الزمنية والفرز.
-         * * @param {string} timeStrWithPeriod - سلسلة نصية للوقت (مثال: '01:30 م').
-         * * @returns {Date} - كائن Date يمثل الوقت في نفس يوم اليوم.
-         */
-        function timeToDate(timeStrWithPeriod) {
-            const today = new Date();
-            const [timeStr, period] = timeStrWithPeriod.split(' ');
-            let [hours, minutes] = timeStr.split(':').map(Number);
-            
-            if (period === 'م' && hours !== 12) hours += 12; 
-            if (period === 'ص' && hours === 12) hours = 0; 
-            
-            return new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes, 0, 0);
-        }
-      
-      // ... (أسفل المتغيرات السابقة)
-        let MAX_BOOKINGS_PER_SLOT = 3; // ⭐️⭐️ السطر الجديد: السعة الافتراضية للبريك ⭐️⭐️
-
-        /**
-         * دالة لحساب وقت نهاية البريك بعد إضافة المدة.
-         * * @param {string} startTime - وقت البدء (مثال: '01:30 م').
-         * * @param {number} duration - المدة بالدقائق (15 أو 30).
-         * * @returns {string} - وقت الانتهاء بتنسيق 12 ساعة (مثال: '01:45 م').
-         */
-        function getBreakEndString(startTime, duration) {
-            const startDate = timeToDate(startTime);
-            const endDate = new Date(startDate.getTime() + duration * 60000);
-            
-            let hours = endDate.getHours();
-            const minutes = endDate.getMinutes();
-            const period = hours >= 12 && hours < 24 ? 'م' : 'ص'; 
-            
-            const hours12 = hours % 12 || 12;
-            
-            return `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
-        }
-
-        /**
-         * تنسيق فرق الوقت بالمللي ثانية إلى (ساعات:دقائق:ثواني) لعرض المؤقتات.
-         * * @param {number} ms - فرق الوقت بالمللي ثانية.
-         * * @returns {string} - فرق الوقت المنسق (مثال: 1 س 30 د 15 ث).
-         */
-        function formatTimeDifference(ms) {
-            const seconds = Math.floor(ms / 1000);
-            const minutes = Math.floor(seconds / 60);
-            const hours = Math.floor(minutes / 60);
-            
-            const remainingSeconds = seconds % 60;
-            const remainingMinutes = minutes % 60;
-            
-            let parts = [];
-            if (hours > 0) parts.push(`${hours} س`);
-            if (minutes > 0 || hours > 0) parts.push(`${remainingMinutes} د`);
-            parts.push(`${remainingSeconds} ث`);
-
-            return parts.join(' ');
-        }
-        
-        /**
-         * عرض رسالة إشعار مؤقتة للمستخدم في شريط الإشعارات العلوي.
-         * * @param {string} message - نص الإشعار.
-         * * @param {string} type - نوع الإشعار ('success', 'error', 'info', 'warning').
-         */
-        function showNotification(message, type = 'info') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = 'notification fixed top-0 left-1/2 transform -translate-x-1/2 p-3 rounded-b-lg shadow-lg font-medium transition-all duration-300 z-50';
-            
-            const typeClasses = {
-                'success': 'bg-secondary-green text-white',
-                'error': 'bg-danger-red text-white',
-                'info': 'bg-light-blue text-white',
-                'warning': 'bg-gold-star text-white',
-            };
-            
-            notification.classList.add(typeClasses[type] || typeClasses['info'], 'show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 5000); 
-        }
-
-      
-      
-        /**
-         * توليد سلسلة نصية بتاريخ اليوم بصيغة YYYY-MM-DD.
-         * * @returns {string} - التاريخ الحالي بصيغة (مثال: "2025-10-13").
-         */
-        function getTodayDateString() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-
-        // =========================================================================
-        // ********************** وظائف توليد البريكات (SLOT GENERATORS) **********************
-        // =========================================================================
-
-        /**
-         * توليد فترات البريك المتاحة لنظام الوردية (صباحي/مسائي) ضمن نطاق زمني محدد.
-         * * @param {number} startHour - ساعة بداية الحجز (تنسيق 24 ساعة).
-         * * @param {number} endHour - ساعة نهاية الحجز (تنسيق 24 ساعة).
-         */
-        const generateBreakTimes = (startHour, endHour) => {
-            const slots = [];
-            for (let h = startHour; h < endHour; h++) {
-                for (let m = 0; m < 60; m += 15) {
-                    let time = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                    let period = h >= 12 && h < 24 ? 'م' : 'ص';
-                    
-                    if (h + (m + 15) / 60 <= endHour) {
-                        slots.push({ time: `${time} ${period}`, duration: 15 });
-                    }
-                    
-                    if (m % 30 === 0 && h + (m + 30) / 60 <= endHour) {
-                        slots.push({ time: `${time} ${period}`, duration: 30 });
-                    }
-                }
-            }
-            
-            const uniqueSlots = Array.from(new Set(slots.map(s => `${s.time}-${s.duration}`)))
-                                     .map(str => {
-                                         const [time, durationStr] = str.split('-');
-                                         return { time: time, duration: Number(durationStr) };
-                                     });
-            
-            return uniqueSlots.sort((a, b) => timeToDate(a.time) - timeToDate(b.time));
-        };
-        
-        /**
-         * توليد فترات بريك مفتوحة 24 ساعة لقسم CHAT.
-         */
-        const generate24HourBreakTimes = () => {
-            const slots = [];
-            for (let h = 0; h < 24; h++) { 
-                for (let m = 0; m < 60; m += 15) {
-                    let hours24 = h;
-                    let hours12 = hours24 % 12 || 12;
-                    let time = `${String(hours12).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                    let period = hours24 >= 12 && hours24 < 24 ? 'م' : 'ص';
-                    
-                    slots.push({ time: `${time} ${period}`, duration: 15 });
-                    
-                    if (m % 30 === 0) {
-                        slots.push({ time: `${time} ${period}`, duration: 30 });
-                    }
-                }
-            }
-            
-            const uniqueSlots = Array.from(new Set(slots.map(s => `${s.time}-${s.duration}`)))
-                                     .map(str => {
-                                         const [time, durationStr] = str.split('-');
-                                         return { time: time, duration: Number(durationStr) };
-                                     });
-                                     
-            return uniqueSlots.sort((a, b) => timeToDate(a.time) - timeToDate(b.time));
-        };
-
-        const morningBreakStartTimes = generateBreakTimes(10, 16); // من 10:00 ص إلى 4:00 م (16:00)
-        const eveningBreakStartTimes = generateBreakTimes(16, 22); // من 4:00 م إلى 10:00 م
-        const chat24hrBreakStartTimes = generate24HourBreakTimes(); // 24 ساعة كاملة
-
-
-        // =========================================================================
-        // ********************** وظائف Firebase / Firestore (Backend) ***********************
-        // =========================================================================
-        
-        /**
-         * دالة لحفظ أو تحديث حجز موظف في Firestore.
-         * * @param {object} employeeData - بيانات حجز الموظف.
-         */
-        async function saveEmployeeBooking(employeeData) {
-            const db = window.getDb();
-            const collectionPath = window.getCollectionPath();
-            
-            if (!db || !window.isAuthReady || !collectionPath) {
-                showNotification('لم يتم تهيئة قاعدة البيانات. الحفظ السحابي معطل.', 'error');
-                return;
-            }
-            
-            const dateString = getTodayDateString();
-            const safeName = employeeData.name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, ''); 
-            const docId = `${safeName}_${employeeData.shift}_${dateString}`;
-            
-            const docRef = doc(db, collectionPath, docId);
-            const dataToSave = {
-                name: employeeData.name, 
-                shift: employeeData.shift,
-                breaks: employeeData.breaks,
-                date: dateString,
-                confirmedAt: new Date().toISOString(),
-                group: window.selectedGroup,
-                timestamp: serverTimestamp()
-            };
-
-            try {
-                await setDoc(docRef, dataToSave, { merge: true });  
-                console.log(`Booking for ${employeeData.name} saved successfully with ID: ${docId}`);
-                showNotification(`تم حجز البريكات لـ ${employeeData.name} بنجاح ✅`, 'success');
-
-                window.hasBooked = true;
-                applyBookingLockout(); 
-                resetSelection();
-
-            } catch (error) {
-                console.error("Error saving booking: ", error);
-                showNotification('حدث خطأ في حفظ الحجز على السحابة: ' + error.message, 'error');
-            }
-        }
-        
-        /**
-         * بناء مسار المجموعة (Collection Path) بناءً على القسم المختار.
-         * * @returns {string} - المسار في Firestore (مثال: bookings/sms/employees).
-         */
-        window.getCollectionPath = (group = window.selectedGroup) => {
-            if (!group) return null;
-            const normalizedGroupName = group.replace(/\s+/g, '-').toLowerCase();
-            return `bookings/${normalizedGroupName}/employees`;
-        };
-
-        /**
-         * تبدأ مزامنة البيانات في الوقت الفعلي من Firestore للقسم المحدد.
-         * * @param {string} targetGroup - القسم الذي نريد مزامنة بياناته.
-         * * @param {boolean} updateUI - هل يجب تحديث الواجهة بعد المزامنة؟
-         */
-        window.startRealtimeSync = function(targetGroup, updateUI = true) {
-            if (window.firestoreUnsubscribe) {
-                window.firestoreUnsubscribe(); 
-            }
-            
-            const path = window.getCollectionPath(targetGroup);
-            if (!path) return;
-            
-            const collectionRef = collection(db, path);
-            const todayDateString = getTodayDateString();
-            const q = query(collectionRef, where("date", "==", todayDateString));
-
-            window.firestoreUnsubscribe = onSnapshot(q, (snapshot) => {
-                employees = [];
-                snapshot.forEach((doc) => {
-                    employees.push(doc.data());
-                });
-                
-                if (updateUI) {
-                    // تحديث الواجهة الرئيسية فقط إذا كان المستخدم في وضع الحجز
-                    if (breakSelection.classList.contains('hidden')) {
-                        console.log('Sync complete, UI update skipped as user is not on break selection screen.');
-                    } else {
-                        renderSchedule();
-                        renderTimeSlots();
-                        renderDailySummary();
-                        updateAllTimers();
-                        console.log(`Realtime sync complete. Fetched ${employees.length} bookings for ${targetGroup}.`);
-                    }
-                } else {
-                    // يستخدم هذا المسار لتحديث البيانات في الخلفية لوظائف مثل "حجوزاتي"
-                    renderMyBookingsSchedule(employees);
-                }
-            }, (error) => {
-                console.error("Firestore sync error: ", error);
-                showNotification('فشل في مزامنة البيانات السحابية: ' + error.message, 'error');
-            });
-        };
-        
-      
-      
-      
-      /**
- * تتحقق مما إذا كان حجز جديد يتعارض مع حجز موجود في قسم محظور (CHAT ضد SMS).
- * @param {string} newGroup - اسم قسم الموظف الجديد الذي يحاول الحجز.
- * @param {string} newTime - وقت بدء البريك الجديد (مثلاً '01:00').
- * @param {number} newDuration - مدة البريك الجديد (15 أو 30).
- * @param {Array<object>} allEmployees - قائمة جميع الموظفين وحجوزاتهم لهذا اليوم.
- * @returns {boolean} - true إذا كان الحجز مسموحاً، false إذا كان هناك تعارض.
- */
-function checkGroupOverlap(newGroup, newTime, newDuration, allEmployees) {
-    const groupToCheck = newGroup.toUpperCase();
-
-    // 1. تحديد القسم الآخر المقيد
-    let restrictedGroup = null;
-    if (groupToCheck === 'CHAT') {
-        restrictedGroup = 'SMS';
-    } else if (groupToCheck === 'SMS') {
-        restrictedGroup = 'CHAT';
-    } else {
-        // إذا كان القسم الجديد ليس CHAT ولا SMS، لا يوجد قيود.
-        return true; 
-    }
-    
-    // 2. التحقق من وجود تعارض مع القسم المقيد الآخر
-    const overlapExists = allEmployees.some(emp => {
-        // هل هذا الموظف ينتمي للقسم المقيد الآخر؟
-        if (emp.group.toUpperCase() === restrictedGroup) {
-            // هل لديه بريك مطابق للوقت والمدة المطلوبة؟
-            return emp.breaks.some(existingBreak => 
-                existingBreak.time === newTime && existingBreak.duration === newDuration
-            );
-        }
-        return false;
-    });
-
-    // إذا لم يوجد تداخل (overlapExists = false)، فالحجز مسموح (نرجع true)
-    return !overlapExists;
-}
-        /**
-         * دالة لحذف حجز موظف معين لليوم الحالي (تستخدم في لوحة الإدارة).
-         * * @param {string} employeeName - اسم الموظف.
-         * * @param {string} shift - الوردية.
-         */
-        window.deleteEmployeeBookings = async function(employeeName, shift) {
-            const db = window.getDb();
-            const path = window.getCollectionPath();
-            
-            if (!path || !employeeName || !shift) {
-                showNotification('خطأ إداري: بيانات الحذف غير كاملة.', 'error');
-                return false;
-            }
-            
-            const dateString = getTodayDateString();
-            const safeName = employeeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
-            const docId = `${safeName}_${shift}_${dateString}`;
-            
-            const employeeDocRef = doc(db, path, docId);
-
-            try {
-                await deleteDoc(employeeDocRef);
-                showNotification(`✅ تم حذف حجز الموظف ${employeeName} لهذا اليوم بنجاح.`, 'success');
-                return true;
-            } catch (error) {
-                console.error("Error deleting document: ", error);
-                showNotification(`❌ فشل في حذف سجل الحجز: ${error.message}. يرجى التحقق من وجود السجل.`, 'error');
-                return false;
-            }
-        };
-
-        // *************************************************************************
-        // ********************** وظائف التحكم بالواجهة (UI) **********************
-        // *************************************************************************
-
-        // ربط عناصر DOM (لتقليل عمليات البحث عن العناصر)
-        const groupSelection = document.getElementById('groupSelection');
-        const shiftSelection = document.getElementById('shiftSelection');
-        const breakSelection = document.getElementById('breakSelection');
-        const scheduleDisplay = document.getElementById('scheduleDisplay');
-        const groupNameInput = document.getElementById('groupNameInput');
-        const currentGroupNameDisplay = document.getElementById('currentGroupNameDisplay');
-        const timeSlotsContainer = document.getElementById('timeSlotsContainer');
-        const employeeName = document.getElementById('employeeName');
-        const confirmButton = document.getElementById('confirmButton');
-        const selectedCount = document.getElementById('selectedCount');
-        const scheduleContent = document.getElementById('scheduleContent');
-        const bookedEmployeesCount = document.getElementById('bookedEmployeesCount');
-        const available15MinBreaks = document.getElementById('available15MinBreaks');
-        const available30MinBreaks = document.getElementById('available30MinBreaks');
-        const summaryShiftName = document.getElementById('summaryShiftName');
-        const adminModal = document.getElementById('adminModal');
-        const adminCode = document.getElementById('adminCode');
-        const adminLoginButton = document.getElementById('adminLoginButton');
-        const adminContent = document.getElementById('adminContent');
-        const adminLogoutButton = document.getElementById('adminLogoutButton');
-        const adminToggle = document.getElementById('adminToggle');
-        const themeToggle = document.getElementById('themeToggle');
-        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
-        const chat24hrShiftCard = document.getElementById('chat24hrShift'); 
-
-        // عناصر واجهة "حجوزاتي" الجديدة
-        const myBookingsSection = document.getElementById('myBookingsSection');
-        const myBookingsGroupNameInput = document.getElementById('myBookingsGroupNameInput');
-        const myBookingsEmployeeNameInput = document.getElementById('myBookingsEmployeeNameInput');
-        const viewMyBookingsButton = document.getElementById('viewMyBookingsButton');
-        const myBookingsListContainer = document.getElementById('myBookingsListContainer');
-        const myBookingsBackButton = document.getElementById('myBookingsBackButton');
-        const myBookingsToggle = document.getElementById('myBookingsToggle');
-        const myBookingsStatus = document.getElementById('myBookingsStatus');
-
-
-        /**
-         * إظهار واجهة اختيار القسم وإخفاء الواجهات الأخرى.
-         */
-        window.showGroupSelection = function() {
-            [groupSelection, myBookingsSection, shiftSelection, breakSelection, scheduleDisplay].forEach(el => el.classList.add('hidden'));
-            groupSelection.classList.remove('hidden');
-        }
-
-        /**
-         * وظيفة الدخول إلى القسم بعد التحقق من الاسم.
-         */
-        function enterGroup() {
-            const name = groupNameInput.value.trim().toUpperCase();
-            
-            if (!name) {
-                showNotification('الرجاء إدخال اسم القسم.', 'error');
-                return;
-            }
-            
-            if (!ALLOWED_GROUPS.includes(name)) {
-                showNotification(`القسم "${name}" غير موجود. المتاح: ${ALLOWED_GROUPS.join(', ')}.`, 'error');
-                return;
-            }
-            
-            window.selectedGroup = name;
-            currentGroupNameDisplay.textContent = name;
-            
-            groupSelection.classList.add('hidden');
-            
-            // حالة خاصة: قسم CHAT يدخل مباشرة إلى 24 ساعة
-            if (name === 'CHAT') {
-                shiftSelection.classList.add('hidden'); 
-                breakSelection.classList.remove('hidden');
-                scheduleDisplay.classList.remove('hidden');
-                window.selectShift('24hr');
-            } else {
-                shiftSelection.classList.remove('hidden');
-                scheduleDisplay.classList.remove('hidden');
-                breakSelection.classList.add('hidden');
-            }
-            
-            // تطبيق التعطيل والضبابية على وردية 24 ساعة لغير قسم CHAT
-            if (name !== 'CHAT') {
-                 chat24hrShiftCard.classList.add('disabled-fog');
-                 document.getElementById('chatShiftOverlay').classList.remove('hidden');
-            } else {
-                 chat24hrShiftCard.classList.remove('disabled-fog');
-                 document.getElementById('chatShiftOverlay').classList.add('hidden');
-            }
-
-
-            if (typeof window.startRealtimeSync === 'function') {
-                window.isAuthReady = true; 
-                // بدء المزامنة لقسم الحجز
-                window.startRealtimeSync(name, true); 
-            } else {
-                showNotification('وظائف المزامنة السحابية غير متوفرة.', 'warning');
-            }
-        }
-
-        /**
-         * الرجوع من شاشة اختيار الوردية إلى شاشة اختيار القسم.
-         */
-        window.goBackToGroupSelection = function() {
-            if (window.firestoreUnsubscribe) {
-                window.firestoreUnsubscribe(); 
-            }
-            window.selectedGroup = null;
-            selectedShift = null;
-            employees = [];
-            selectedBreaks = [];
-            window.hasBooked = false;
-            
-            window.showGroupSelection();
-            
-            groupNameInput.value = '';
-            resetSummaryAndSchedule();
-            applyBookingLockout();
-        }
-
-        /**
-         * ⭐️⭐️ الرجوع من شاشة حجز البريكات إلى شاشة اختيار الوردية (الزر المنسق الجديد) ⭐️⭐️
-         */
-        window.goBackToShiftSelection = function() {
-            resetSelection(); 
-            
-            breakSelection.classList.add('hidden');
-            // تأكد من ظهور شاشة اختيار الوردية
-            shiftSelection.classList.remove('hidden');
-            
-            // ملاحظة: جدول الحجوزات (scheduleDisplay) يظل مرئياً في الخلفية لسرعة الانتقال
-            
-        }
-        
-        /**
-         * دالة مساعدة لمسح اختيار المستخدم الحالي وإعادة تعيين الحقول.
-         */
-        function resetSelection() {
-            employeeName.value = '';
-            selectedBreaks = [];
-            selectedCount.textContent = '0';
-            confirmButton.disabled = true;
-            renderTimeSlots(); 
-        }
-        
-        /**
-         * دالة مساعدة لتنظيف ملخص اليوم وجدول الحجوزات عند الخروج.
-         */
-        function resetSummaryAndSchedule() {
-            scheduleContent.innerHTML = `
-                <div class="col-span-12 p-4 text-center text-gray-500 dark:text-gray-400">اختر وردية لعرض الجدول</div>
-            `;
-            bookedEmployeesCount.textContent = '0';
-            available15MinBreaks.textContent = '0';
-            available30MinBreaks.textContent = '0';
-        }
-
-        /**
-         * اختيار الوردية (صباحي/مسائي/24 ساعة).
-         * * @param {string} shift - الوردية المراد اختيارها.
-         */
-        window.selectShift = function(shift) {
-            
-            if (shift === '24hr' && window.selectedGroup !== 'CHAT') {
-                 showNotification('وردية 24 ساعة مخصصة لقسم CHAT فقط.', 'error');
-                 return; 
-            }
-
-            window.selectedShift = selectedShift = shift;  
-            
-            document.querySelectorAll('.shift-card').forEach(card => {
-                card.classList.remove('ring-4', 'ring-indigo-200', 'dark:ring-indigo-900', 'ring-green-200', 'dark:ring-green-900', 'border-indigo-600', 'border-green-600');
-                card.classList.add('border-transparent');
-            });
-
-            const shiftMap = { '24hr': 'chat24hrShift', 'morning': 'morningShift', 'evening': 'eveningShift' };
-            const selectedElement = document.getElementById(shiftMap[shift]);
-            if (selectedElement) {
-                const ringColor = shift === '24hr' ? 'ring-green-200' : 'ring-indigo-200';
-                const borderColor = shift === '24hr' ? 'border-green-600' : 'border-indigo-600';
-                selectedElement.classList.add(borderColor, 'ring-4', ringColor);
-            }
-
-            setTimeout(() => {
-                shiftSelection.classList.add('hidden');
-                breakSelection.classList.remove('hidden');
-                scheduleDisplay.classList.remove('hidden');
-                
-                renderTimeSlots();
-                renderSchedule(); 
-                updateAllTimers();
-                renderDailySummary();
-                resetSelection();
-                applyBookingLockout();
-            }, 200); 
-        }
-        
-        /**
-         * تطبيق حالة القفل بعد إتمام الحجز بنجاح.
-         */
-        function applyBookingLockout() {
-            if (window.hasBooked) {
-                employeeName.value = '';
-                employeeName.placeholder = 'لا يمكن إجراء حجز جديد في هذه الجلسة';
-                employeeName.disabled = true;
-                
-                confirmButton.disabled = true;
-                confirmButton.textContent = '✅ تم تأكيد حجزك اليومي بنجاح';
-                confirmButton.classList.remove('bg-secondary-green', 'hover:bg-green-700', 'disabled:bg-gray-400');
-                confirmButton.classList.add('bg-gray-500', 'cursor-not-allowed', 'disabled:bg-gray-500');
-
-                timeSlotsContainer.innerHTML = `
-                    <p class="col-span-full text-center text-secondary-green font-semibold py-4 bg-green-50 rounded-lg dark:bg-green-900 dark:text-green-300">
-                        ✅ تم تسجيل حجزك لهذا اليوم. لا يمكنك إجراء حجز آخر في نفس الجلسة لتجنب الحجز العشوائي.
-                        <br>
-                        لإجراء حجز جديد، يرجى **الخروج** إلى شاشة اختيار القسم أو **تحديث الصفحة**.
-                    </p>
-                `;
-                selectedBreaks = [];
-                selectedCount.textContent = '0';
-            } else {
-                employeeName.disabled = false;
-                employeeName.placeholder = 'الاسم هنا';
-                confirmButton.textContent = 'تأكيد الحجز الآن';
-                confirmButton.classList.add('bg-secondary-green', 'hover:bg-green-700', 'disabled:bg-gray-400');
-                confirmButton.classList.remove('bg-gray-500', 'cursor-not-allowed', 'disabled:bg-gray-500');
-            }
-        }
-        
-        // ⭐️⭐️ السطور الجديدة: تحميل إعدادات السعة عند بدء التشغيل ⭐️⭐️
-            const savedCapacity = localStorage.getItem('slotCapacity');
-            if (savedCapacity) {
-                MAX_BOOKINGS_PER_SLOT = parseInt(savedCapacity, 10);
-            }
-
-            // إظهار الواجهة الافتراضية عند التحميل
-            window.showGroupSelection();
-        /**
-        
-        
-        
-        
-         * توليد وعرض أزرار فترات البريك (Slots) بناءً على الوردية المختارة.
-         */
-/**
-         * توليد وعرض أزرار فترات البريك (Slots) بناءً على الوردية المختارة.
-         * ⭐️⭐️ تم التعديل لتطبيق نظام السعة (3 موظفين لكل بريك) ⭐️⭐️
-         */
-/**
-         * توليد وعرض أزرار فترات البريك (Slots) بناءً على الوردية المختارة.
-         * ⭐️⭐️ تم التعديل ليقرأ السعة من المتغير العام الذي يتحكم به الأدمن ⭐️⭐️
-         */
-        function renderTimeSlots() {
-            if (window.hasBooked) {
-                applyBookingLockout(); 
-                return;
-            }
-
-            // لا حاجة لتعريف السعة هنا بعد الآن، سيتم استخدام المتغير العام MAX_BOOKINGS_PER_SLOT
-            const now = new Date(); 
-            let slots;
-            let isShiftClosed = false;
-
-            if (selectedShift === '24hr') {
-                slots = chat24hrBreakStartTimes;
-            } else {
-                const endHour = selectedShift === 'morning' ? 16 : 22; 
-                slots = selectedShift === 'morning' ? morningBreakStartTimes : eveningBreakStartTimes;
-                
-                const endLimit = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, 0, 0, 0);
-                isShiftClosed = now.getTime() >= endLimit.getTime();
-            }
-            
-            timeSlotsContainer.innerHTML = '';
-
-            if (isShiftClosed) {
-                const shiftName = selectedShift === 'morning' ? 'الصباحي' : 'المسائي';
-                timeSlotsContainer.innerHTML = `<p class="col-span-full text-center text-danger-red font-semibold py-4 bg-red-50 rounded-lg dark:bg-red-900 dark:text-red-300">
-                    انتهى وقت حجز البريكات لهذه الوردية (${shiftName}) لليوم.
-                </p>`;
-                confirmButton.disabled = true;
-                return;
-            }
-            
-            const currentIndex = selectedBreaks.length;
-            const requiredDuration = currentIndex < MAX_TOTAL_BREAKS ? REQUIRED_ORDER[currentIndex] : null;
-
-            const allBookedSlots = employees
-                                         .filter(emp => emp.shift === selectedShift)
-                                         .flatMap(emp => emp.breaks)
-                                         .map(b => `${b.time}-${b.duration}`);
-
-            slots.forEach(slot => {
-                const slotStartTime = slot.time;
-                const duration = slot.duration;
-                const slotEndTime = getBreakEndString(slotStartTime, duration);
-                const uniqueSlotKey = `${slotStartTime}-${duration}`;
-
-                const bookingsCount = allBookedSlots.filter(s => s === uniqueSlotKey).length;
-                const remainingSlots = MAX_BOOKINGS_PER_SLOT - bookingsCount; // سيستخدم المتغير العام هنا
-                const isBooked = remainingSlots <= 0;
-
-                const isSelected = selectedBreaks.some(b => b.time === slotStartTime && b.duration === duration);
-                const breakTimeEnd = new Date(timeToDate(slotStartTime).getTime() + duration * 60000);
-                const isPastTime = breakTimeEnd.getTime() < now.getTime(); 
-                const isIncorrectDuration = requiredDuration !== null && duration !== requiredDuration && !isSelected; 
-                const isTotalMaxed = selectedBreaks.length >= MAX_TOTAL_BREAKS && !isSelected;
-                let isTimeInvalid = false;
-                if (selectedBreaks.length > 0 && !isSelected) {
-                    const tempBreaks = [...selectedBreaks, slot].sort((a, b) => timeToDate(a.time) - timeToDate(b.time));
-                    if (!isSelectionTimeOrderCorrect(tempBreaks)) {
-                        isTimeInvalid = true;
-                    }
-                }
-                const isDisabled = isBooked || isPastTime || isIncorrectDuration || isTotalMaxed || isTimeInvalid; 
-
-                let slotClasses;
-                let statusText;
-                let durationText = `(${duration} دقيقة)`;
-
-                if (isPastTime) {
-                    slotClasses = 'bg-gray-200 text-gray-500 cursor-not-allowed booked dark:bg-gray-700 dark:text-gray-400 opacity-70';
-                    statusText = 'انتهت';
-                } else if (isBooked) {
-                    slotClasses = 'bg-gray-300 text-danger-red cursor-not-allowed booked dark:bg-gray-700 dark:text-red-400';
-                    statusText = 'محجوزة بالكامل';
-                } else if (isSelected) {
-                    slotClasses = 'bg-primary-indigo text-white shadow-lg border-2 border-indigo-800 dark:bg-indigo-700 dark:border-indigo-500 selected';
-                    const isLastSelected = selectedBreaks[selectedBreaks.length - 1]?.time === slotStartTime && selectedBreaks[selectedBreaks.length - 1]?.duration === duration;
-                    statusText = isLastSelected ? 'اضغط للإلغاء' : 'مختارة (لإلغائها يجب إلغاء التالي)';
-                } else if (isTotalMaxed) {
-                    slotClasses = 'bg-gray-200 text-danger-red cursor-not-allowed booked dark:bg-gray-700 dark:text-red-400 opacity-80';
-                    statusText = 'اكتمل اختيار البريكات';
-                } else if (isIncorrectDuration) {
-                    slotClasses = 'bg-gray-200 text-orange-600 cursor-not-allowed booked dark:bg-gray-700 dark:text-orange-400 opacity-80';
-                    statusText = `يجب اختيار بريك ${requiredDuration} دقيقة أولاً`;
-                } else if (isTimeInvalid) {
-                    slotClasses = 'bg-gray-200 text-orange-600 cursor-not-allowed booked dark:bg-gray-700 dark:text-orange-400 opacity-80';
-                    statusText = 'تداخل زمني';
-                } else {
-                    slotClasses = 'bg-white text-primary-indigo hover:bg-indigo-100 border border-indigo-200 dark:bg-gray-800 dark:text-indigo-400 dark:hover:bg-gray-700 dark:border-indigo-900';
-                    statusText = `متاح (متبقي ${remainingSlots})`;
-                }
-                
-                const slotElement = document.createElement('button');
-                slotElement.className = `time-slot p-3 rounded-lg text-center text-sm font-bold ${slotClasses}`;
-                slotElement.innerHTML = `
-                    <span class="block text-xs font-normal mb-1">${durationText}</span>
-                    <span class="block text-lg">${slotStartTime} - ${slotEndTime}</span>
-                    <span class="block text-xs font-normal mt-1">${statusText}</span>
-                `;
-                
-                slotElement.disabled = isDisabled && !isSelected;
-                
-                if (!isDisabled || isSelected) {
-                    slotElement.addEventListener('click', () => toggleBreakSelection(slotStartTime, duration));
-                }
-                
-                timeSlotsContainer.appendChild(slotElement);
-            });
-        }        /**
-         * التحقق من التسلسل الزمني الصحيح للبريكات المختارة (عدم التداخل).
-         * * @param {Array<object>} tempBreaks - قائمة البريكات المراد فحصها.
-         * * @returns {boolean} - true إذا كان التسلسل الزمني صحيحاً، false خلاف ذلك.
-         */
-        function isSelectionTimeOrderCorrect(tempBreaks) {
-            const sortedBreaks = [...tempBreaks].sort((a, b) => timeToDate(a.time) - timeToDate(b.time));
-
-            for(let i = 1; i < sortedBreaks.length; i++) {
-                const prevBreak = sortedBreaks[i-1];
-                const currentBreak = sortedBreaks[i];
-
-                const prevBreakStartTime = timeToDate(prevBreak.time);
-                const prevBreakEndTime = new Date(prevBreakStartTime.getTime() + prevBreak.duration * 60000);
-                const currentBreakStartTime = timeToDate(currentBreak.time);
-
-                if (currentBreakStartTime < prevBreakEndTime) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        /**
-         * التعامل مع اختيار/إلغاء اختيار فترة بريك بمرونة
-         * * @param {string} slotStartTime - وقت بدء البريك.
-         * * @param {number} duration - مدة البريك بالدقائق.
-         */
-        function toggleBreakSelection(slotStartTime, duration) {
-            const index = selectedBreaks.findIndex(b => b.time === slotStartTime && b.duration === duration);
-            
-            if (index !== -1) {
-                const isLastSelected = index === selectedBreaks.length - 1;
-                
-                if (!isLastSelected) {
-                    showNotification('لا يمكن إلغاء بريك من المنتصف، يجب إلغاء آخر بريك تم اختياره أولاً.', 'error');
-                    return;
-                }
-                
-                selectedBreaks.splice(index, 1);
-                
-            } else {
-                const currentSelectionIndex = selectedBreaks.length;
-                
-                if (currentSelectionIndex >= MAX_TOTAL_BREAKS) {
-                    showNotification('تم اختيار 3 بريكات بالفعل. لا يمكن الإضافة.', 'error');
-                    return;
-                }
-
-                const requiredDuration = REQUIRED_ORDER[currentSelectionIndex];
-                
-                if (duration !== requiredDuration) {
-                    showNotification(`البريك رقم ${currentSelectionIndex + 1} يجب أن يكون ${requiredDuration} دقيقة.`, 'error');
-                    return;
-                }
-                
-                const tempBreaks = [...selectedBreaks, { time: slotStartTime, duration: duration }];
-
-                if (!isSelectionTimeOrderCorrect(tempBreaks)) {
-                    showNotification(`تداخل زمني: البريك يجب أن يبدأ بعد انتهاء البريك السابق.`, 'error');
-                    return;
-                }
-                
-                selectedBreaks.push({ time: slotStartTime, duration: duration });
-            }
-            
-            renderTimeSlots();
-            selectedCount.textContent = selectedBreaks.length;
-            
-            const isThreeBreaks = selectedBreaks.length === MAX_TOTAL_BREAKS;
-            const isCorrectDurationOrder = isThreeBreaks && selectedBreaks.every((b, i) => b.duration === REQUIRED_ORDER[i]);
-            const isTimeOrderValid = isSelectionTimeOrderCorrect(selectedBreaks);
-            
-            confirmButton.disabled = !(isCorrectDurationOrder && isTimeOrderValid && employeeName.value.trim());
-        }
-
-        /**
-         * تأكيد الحجز وحفظه في Firestore.
-         */
-        async function confirmReservation() {
-            const name = employeeName.value.trim();
-            
-            const isThreeBreaks = selectedBreaks.length === MAX_TOTAL_BREAKS;
-            const isCorrectDurationOrder = isThreeBreaks && selectedBreaks.every((b, i) => b.duration === REQUIRED_ORDER[i]);
-            const isTimeOrderCorrect = isSelectionTimeOrderCorrect(selectedBreaks);
-
-            if (!name || !isCorrectDurationOrder || !isTimeOrderCorrect) {
-                showNotification('يجب إدخال الاسم واختيار 3 بريكات بالترتيب الإجباري (15، 30، 15) وبتسلسل زمني صحيح لتأكيد الحجز.', 'error');
-                return;
-            }
-            
-            if (employees.some(emp => emp.name.toUpperCase() === name.toUpperCase() && emp.shift === selectedShift)) {
-                showNotification(`الموظف ${name} لديه حجز بالفعل في هذه الوردية لهذا اليوم. يرجى مراجعة الجدول.`, 'error');
-                return;
-            }
-            
-            const employee = {
-                name,
-                shift: selectedShift,
-                breaks: [...selectedBreaks],
-                group: window.selectedGroup
-            };
-            
-            confirmButton.disabled = true;
-            await saveEmployeeBooking(employee);
-            confirmButton.disabled = false;
-        }
-        
-        /**
-         * إنشاء محتوى خلية البريك في الجدول.
-         */
-        function createBreakCellContent(breakItem) {
-            const breakTime = breakItem.time;
-            const duration = breakItem.duration;
-            const breakEndString = getBreakEndString(breakTime, duration);
-            
-            const durationTextClass = duration === 30 ? 'text-danger-red dark:text-red-400' : 'text-secondary-green dark:text-green-400';
-
-            return `
-                <span class="inline-block font-bold text-sm text-gray-800 dark:text-gray-100">${breakTime} - ${breakEndString}</span>
-                <span class="block text-xs font-medium ${durationTextClass}">(${duration} دقيقة)</span>
-                <div id="status-timer-${breakTime.replace(/ /g, '-').replace(/:/g, '-')}-${breakItem.duration}" class="timer-display mt-1">
-                </div>
-            `;
-        }
-
-        /**
-         * توليد وعرض الملخص اليومي (عدد الموظفين المحجوزين والبريكات المتاحة).
-         */
-        window.renderDailySummary = function() {
-            if (!selectedShift) return;
-
-            const shiftNameMap = {
-                'morning': 'الصباحية',
-                'evening': 'المسائية',
-                '24hr': 'المفتوحة (24 ساعة)'
-            };
-            
-            const shiftArabicName = shiftNameMap[selectedShift];
-            summaryShiftName.textContent = shiftArabicName;
-            
-            let allPossibleSlots = [];
-            if (selectedShift === 'morning') allPossibleSlots = morningBreakStartTimes;
-            else if (selectedShift === 'evening') allPossibleSlots = eveningBreakStartTimes;
-            else if (selectedShift === '24hr') allPossibleSlots = chat24hrBreakStartTimes;
-
-            const allBookedKeys = employees
-                                         .filter(emp => emp.shift === selectedShift)
-                                         .flatMap(emp => emp.breaks)
-                                         .map(b => `${b.time}-${b.duration}`);
-                                         
-            const fullyBookedEmployees = employees.filter(emp => emp.shift === selectedShift && emp.breaks && emp.breaks.length === MAX_TOTAL_BREAKS);
-            
-            let available15Min = 0;
-            let available30Min = 0;
-            const now = new Date();
-
-            allPossibleSlots.forEach(slot => {
-                const uniqueKey = `${slot.time}-${slot.duration}`;
-                const breakTimeEnd = new Date(timeToDate(slot.time).getTime() + slot.duration * 60000);
-                
-                if (!allBookedKeys.includes(uniqueKey) && breakTimeEnd.getTime() > now.getTime()) {
-                    if (slot.duration === 15) {
-                        available15Min++;
-                    } else if (slot.duration === 30) {
-                        available30Min++;
-                    }
-                }
-            });
-
-            bookedEmployeesCount.textContent = fullyBookedEmployees.length.toString();
-            available15MinBreaks.textContent = available15Min.toString();
-            available30MinBreaks.textContent = available30Min.toString();
-        }
-
-        /**
-         * توليد وعرض جدول الحجوزات الحالي.
-         */
-        window.renderSchedule = function() {
-            const filteredEmployees = employees.filter(emp => emp.shift === selectedShift);
-            
-            const shiftTitle = selectedShift === 'morning' ? 'الصباح' 
-                             : selectedShift === 'evening' ? 'المساء'
-                             : 'المفتوح (24 ساعة)';  
-
-            if (filteredEmployees.length === 0) {
-                scheduleContent.innerHTML = `
-                    <div class="col-span-12 p-4 text-center text-gray-500 dark:text-gray-400">لا يوجد أي حجز مُسجل في وردية ${shiftTitle} اليوم.</div>
-                `;
-                return;
-            }
-            
-            filteredEmployees.sort((a, b) => {
-                const timeA = a.breaks && a.breaks.length > 0 ? timeToDate(a.breaks[0].time) : new Date(0);
-                const timeB = b.breaks && b.breaks.length > 0 ? timeToDate(b.breaks[0].time) : new Date(0);
-                return timeA - timeB;
-            });
-            
-            scheduleContent.innerHTML = filteredEmployees.map((emp, index) => {
-                const rowClass = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
-                
-                const breaksArray = emp.breaks || [];
-                const displayBreaks = [...breaksArray];
-                while(displayBreaks.length < MAX_TOTAL_BREAKS) {
-                    displayBreaks.push(null);
-                }
-                
-                const breakCells = displayBreaks.map((breakItem, breakIndex) => {
-                    const isLunch = breakIndex === 1 && breakItem && breakItem.duration === 30;
-                    
-                    if (breakItem) {
-                            return `
-                                <div class="col-span-3 p-3 border-r border-gray-200 dark:border-gray-700 ${isLunch ? 'bg-yellow-50 dark:bg-gray-700/50' : ''}">
-                                    ${createBreakCellContent(breakItem)}
-                                </div>
-                            `;
-                    } else {
-                        return `
-                              <div class="col-span-3 p-3 border-r border-gray-200 dark:border-gray-700 text-gray-400 text-sm">
-                                  <span class="font-medium">غير محجوز</span>
-                              </div>
-                            `;
-                    }
-                }).join('');
-                
-                return `
-                    <div class="grid grid-cols-12 text-center items-center py-3 px-2 ${rowClass} hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors border-b border-gray-200 dark:border-gray-700">
-                        <div class="col-span-3 p-3 font-extrabold text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-700">
-                            ${emp.name} 
-                        </div>
-                        ${breakCells}
-                    </div>
-                `;
-            }).join('');
-            
-            feather.replace();
-        }
-
-// *************************************************************************
-        // ********************** وظائف "حجوزاتي" (MY BOOKINGS FUNCTIONS) **************
-        // *************************************************************************
-
-        /**
-         * إظهار واجهة "حجوزاتي" وإخفاء جميع واجهات الحجز.
-         */
-        window.showMyBookings = function() {
-            // إيقاف مزامنة واجهة الحجز الرئيسية
-            if (window.firestoreUnsubscribe) {
-                 window.firestoreUnsubscribe(); 
-            }
-            
-            // إخفاء الواجهات
-            // ملاحظة: افترضنا أن هذه العناصر موجودة (groupSelection, shiftSelection, breakSelection, scheduleDisplay)
-            [groupSelection, shiftSelection, breakSelection, scheduleDisplay].forEach(el => el.classList.add('hidden')); 
-            myBookingsSection.classList.remove('hidden');
-            myBookingsListContainer.innerHTML = '';
-            myBookingsStatus.textContent = 'أدخل بياناتك لعرض حجوزات قسمك.';
-        }
-
-        /**
-         * جلب وعرض حجوزات القسم التي تنطبق عليها الفلترة.
-         */
-        window.fetchAndRenderMyBookings = function() {
-            const group = myBookingsGroupNameInput.value.trim().toUpperCase();
-            const employee = myBookingsEmployeeNameInput.value.trim().toUpperCase();
-
-            if (!group || !employee) {
-                myBookingsStatus.textContent = 'الرجاء إدخال اسم القسم والاسم الشخصي.';
-                myBookingsListContainer.innerHTML = '';
-                return;
-            }
-
-            if (!ALLOWED_GROUPS.includes(group)) {
-                myBookingsStatus.textContent = `القسم "${group}" غير موجود. المتاح: ${ALLOWED_GROUPS.join(', ')}.`;
-                myBookingsListContainer.innerHTML = '';
-                return;
-            }
-
-            // رسالة تحميل مؤقتة
-            myBookingsStatus.textContent = `جاري جلب حجوزات القسم **${group}** والبحث عن حجز **${employee}**...`;
-            myBookingsListContainer.innerHTML = '';
-            
-            // بدء مزامنة جديدة لبيانات القسم المستهدف (مع تعطيل تحديث الواجهة الرئيسية)
-            // (في onSnapshotCallback، سيتم استدعاء renderMyBookingsSchedule)
-            window.startRealtimeSync(group, false); 
-        } 
-        
-        /**
-         * توليد وعرض جدول الحجوزات الخاصة بقسم محدد (من بيانات المزامنة الجديدة).
-         * * @param {Array<object>} fetchedEmployees - قائمة الموظفين المُجلبة حديثاً.
-         */
-        function renderMyBookingsSchedule(fetchedEmployees) {
-            const group = myBookingsGroupNameInput.value.trim().toUpperCase();
-            const employee = myBookingsEmployeeNameInput.value.trim().toUpperCase();
-            
-            // 1. تصفية الحجوزات حسب القسم أولاً
-            const filteredEmployees = fetchedEmployees.filter(emp => emp.group.toUpperCase() === group);
-
-            // 2. التحقق الصارم: البحث عن حجز يطابق اسم الموظف تماماً في هذا القسم
-            const userBooking = filteredEmployees.find(emp => emp.name.toUpperCase() === employee);
-            
-            // ⭐️⭐️ منطق التحقق الصارم الجديد ⭐️⭐️
-            if (!userBooking) {
-                // إذا لم يتم العثور على تطابق تام (القسم صحيح، لكن الاسم غير صحيح أو لا يوجد حجز باسمه)
-                myBookingsStatus.textContent = `❌ لم يتم العثور على أي حجز مطابق لـ **${employee}** في قسم **${group}** لهذا اليوم.`;
-                myBookingsListContainer.innerHTML = '';
-                return; // ⬅️ **نقطة الإيقاف هنا لمنع عرض أي شيء إذا كان الاسم خاطئاً.**
-            }
-
-            // 3. إذا وجد الحجز (التحقق نجح)، استمر في عرض الجدول
-            
-            let userStatusHtml = '';
-            // يتم عرض رسالة النجاح الخاصة بالمستخدم فقط، لا داعي للتحقق مجدداً
-            userStatusHtml = `
-                <div class="bg-indigo-50 dark:bg-indigo-900/50 p-3 rounded-lg border border-indigo-300 dark:border-indigo-700 mb-4 text-center">
-                    <p class="font-bold text-lg text-primary-indigo dark:text-indigo-300">✅ تم العثور على حجزك المطابق لـ **${userBooking.name}**.</p>
-                </div>
-            `;
-            
-            // إعادة استخدام دالة إنشاء الجدول الرئيسية لعرض بيانات القسم
-            myBookingsStatus.textContent = `جدول حجوزات قسم ${group} اليوم (${filteredEmployees.length} موظف):`;
-            
-            // فرز الحجوزات حسب وقت البدء
-            filteredEmployees.sort((a, b) => {
-                // يجب التأكد من وجود دالة timeToDate في بقية الكود للعمل بشكل صحيح
-                const timeA = a.breaks && a.breaks.length > 0 ? timeToDate(a.breaks[0].time) : new Date(0);
-                const timeB = b.breaks && b.breaks.length > 0 ? timeToDate(b.breaks[0].time) : new Date(0);
-                return timeA - timeB;
-            });
-            
-            const tableContent = filteredEmployees.map((emp, index) => {
-                const rowClass = index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900';
-                const isUser = emp.name.toUpperCase() === employee;
-                
-                const breaksText = emp.breaks.map(b => {
-                    // يجب التأكد من وجود دالة getBreakEndString في بقية الكود
-                    const end = window.getBreakEndString ? getBreakEndString(b.time, b.duration) : ''; 
-                    return `${b.time}${end ? ' - ' + end : ''} (${b.duration}د)`;
-                }).join(' | ');
-                
-                const shiftArabic = emp.shift === 'morning' ? 'صباحي' : emp.shift === 'evening' ? 'مسائي' : '24 ساعة';
-
-                return `
-                    <div class="grid grid-cols-12 text-center items-center py-2 px-2 border-b border-gray-200 dark:border-gray-700 ${rowClass} ${isUser ? 'font-extrabold ring-2 ring-indigo-500/50 dark:ring-indigo-300/50' : ''}">
-                        <div class="col-span-3 p-1 text-gray-900 dark:text-white">${emp.name}</div>
-                        <div class="col-span-3 p-1 text-gray-600 dark:text-gray-300">${shiftArabic}</div>
-                        <div class="col-span-6 p-1 text-sm text-gray-700 dark:text-gray-400">${breaksText}</div>
-                    </div>
-                `;
-            }).join('');
-            
-            // بناء الجدول النهائي
-            myBookingsListContainer.innerHTML = `
-                ${userStatusHtml}
-                <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-                    <div class="grid grid-cols-12 text-center font-bold text-sm text-white bg-secondary-green dark:bg-green-700/80 p-3">
-                        <div class="col-span-3">الموظف - AGENT</div>
-                        <div class="col-span-3">الشفت - SHIFT</div>
-                        <div class="col-span-6">البريكات المحجوزة - RB </div>
-                    </div>
-                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                        ${tableContent}
-                    </div>
-                </div>
-            `;
-            // ملاحظة: تأكد من أن feather.replace() موجودة في بقية الكود
-            if (window.feather && window.feather.replace) {
-                window.feather.replace();
-            }
-        }
-
-        // *************************************************************************
-        // ********************** وظائف المؤقتات والتنسيق (Timer/Theme) *************
-        // *************************************************************************
-
-        let timerInterval = null;
-
-        /**
-         * تحديث حالة ومؤقت بريك واحد في الجدول.
-         */
-        function updateTimer(breakItem) {
-            const now = new Date();
-            const breakStartTime = timeToDate(breakItem.time);
-            const breakEndTime = new Date(breakStartTime.getTime() + breakItem.duration * 60000);
-            
-            const timerId = `status-timer-${breakItem.time.replace(/ /g, '-').replace(/:/g, '-')}-${breakItem.duration}`;
-            const timerElement = document.getElementById(timerId);
-
-            if (!timerElement) return;
-
-            let statusHTML = '';
-
-            if (now < breakStartTime) {
-                const msUntilStart = breakStartTime.getTime() - now.getTime();
-                statusHTML = `
-                    <span class="timer-text text-light-blue dark:text-blue-400 text-xs font-medium">
-                        يبدأ بعد: ${formatTimeDifference(msUntilStart)}
-                    </span>
-                `;
-            } 
-            else if (now >= breakStartTime && now < breakEndTime) {
-                const msRemaining = breakEndTime.getTime() - now.getTime();
-                statusHTML = `
-                    <span class="timer-text text-danger-red dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-2 py-0.5 rounded-full text-xs font-semibold">
-                        متبقي: ${formatTimeDifference(msRemaining)}
-                    </span>
-                `;
-            } 
-            else {
-                statusHTML = `
-                    <span class="timer-text text-gray-500 dark:text-gray-500 text-xs">
-                        انتهى البريك
-                    </span>
-                `;
-            }
-
-            timerElement.innerHTML = statusHTML;
-        }
-
-        /**
-         * تحديث جميع المؤقتات والساعة الحالية.
-         */
-        window.updateAllTimers = function() {
-            if (selectedShift) { // فقط إذا كانت هناك وردية مختارة في وضع الحجز
-                const activeBreaks = employees
-                                            .filter(emp => emp.shift === selectedShift)
-                                            .flatMap(emp => emp.breaks || []); 
-                activeBreaks.forEach(breakItem => updateTimer(breakItem));
-            }
-
-            const now = new Date();
-            const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-            currentTimeDisplay.textContent = `الساعة الحالية: ${now.toLocaleTimeString('ar-EG', options)}`;
-        }
-
-        /**
-         * بدء حلقة المؤقت التي تستدعي التحديث كل ثانية.
-         */
-        function startTimerLoop() {
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                window.updateAllTimers();
-                if (new Date().getSeconds() === 0) {
-                    renderTimeSlots();
-                }
-            }, 1000);
-        }
-
-        // *************************************************************************
-        // ********************** وظائف الإدارة (ADMIN FUNCTIONS) *******************
-        // *************************************************************************
-
-        let isAdminLoggedIn = false;
-        
-        function openAdminModal() {
-            adminModal.classList.remove('hidden');
-            if (isAdminLoggedIn) {
-                renderAdminContent();
-                adminContent.classList.remove('hidden');
-                adminLoginButton.classList.add('hidden');
-                adminCode.classList.add('hidden');
-            } else {
-                adminContent.classList.add('hidden');
-                adminLoginButton.classList.remove('hidden');
-                adminCode.classList.remove('hidden');
-                adminCode.value = '';
-                adminCode.focus();
-            }
-        }
-
-        function closeAdminModal() {
-            adminModal.classList.add('hidden');
-        }
-
-        function checkAdminLogin() {
-            if (adminCode.value === ADMIN_CODE) {
-                isAdminLoggedIn = true;
-                showNotification('تم تسجيل الدخول كإداري بنجاح!', 'success');
-                renderAdminContent();
-                adminContent.classList.remove('hidden');
-                adminLoginButton.classList.add('hidden');
-                adminCode.classList.add('hidden');
-            } else {
-                showNotification('رمز المدير غير صحيح.', 'error');
-                adminCode.value = '';
-            }
-        }
-
-        function adminLogout() {
-            isAdminLoggedIn = false;
-            showNotification('تم تسجيل الخروج من وضع الإدارة.', 'info');
-            closeAdminModal();
-        }
-
-        /**
-         * توليد وعرض محتوى لوحة الإدارة (قائمة الموظفين المحجوزين مع زر الحذف).
-         */
-/**
- * توليد وعرض محتوى لوحة الإدارة (قائمة الموظفين مع زر الحذف وإعدادات السعة).
- * ⭐️⭐️ تم التعديل لإضافة حقل التحكم في سعة البريك ⭐️⭐️
- */
-function renderAdminContent() {
-    const adminList = document.getElementById('adminBookingsList');
-    if (!adminList) return;
-
-    // إضافة حقل التحكم بالسعة
-    const settingsHtml = `
-        <div class="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <label for="slotCapacityInput" class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                الحد الأقصى للموظفين في نفس البريك:
-            </label>
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <input type="number" id="slotCapacityInput" min="1" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" value="${MAX_BOOKINGS_PER_SLOT}" />
-                <button id="saveCapacityBtn" class="bg-secondary-green hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                    حفظ
-                </button>
-            </div>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚧 الموقع تحت التطوير 🚧</h1>
+      <p>
+        نعتذر على الانقطاع المؤقت، نعمل على تحسينات مميزة ليظهر الموقع
+        قريباً.
+      </p>
+      <div id="timer">00 يوم 00 : 00 : 00</div>
+
+      <button id="playBtn" style="display: block; margin: 0 auto 30px; padding: 10px 20px; font-size: 1.3rem; font-weight: bold; border: none; border-radius: 12px; background: #ff9800; color: #111; cursor: pointer;">
+        🎮 العب الآن
+      </button>
+
+      <div id="gamesSection" style="display: none;">
+        <div class="tabs">
+          <div class="tab active" data-target="xoGame">XO ذكي</div>
+          <div class="tab" data-target="memoryGame">لعبة الذاكرة</div>
+          <div class="tab" data-target="catchGameContainer">اضغط المربع</div>
+          <div class="tab" data-target="dinoGameContainer">لعبة الديناصور</div>
         </div>
-    `;
 
-    if (employees.length === 0) {
-        adminList.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 p-4">لا توجد حجوزات اليوم في هذا القسم.</p>`;
-    } else {
-        const htmlContent = employees.map(emp => {
-            const breaksText = emp.breaks.map(b => `${b.time} (${b.duration}د)`).join(' | ');
-            const shiftArabic = emp.shift === 'morning' ? 'صباحي' : emp.shift === 'evening' ? 'مسائي' : '24 ساعة';
+        <!-- XO Game -->
+        <div class="game active" id="xoGame">
+          <div id="xoStatus">دورك: X</div>
+          <div id="xoBoard"></div>
+          <button id="xoResetBtn">إعادة تشغيل XO</button>
+        </div>
 
-            return `
-                <div class="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700">
-                    <div>
-                        <p class="font-bold text-gray-900 dark:text-white">${emp.name} - ${shiftArabic} (${emp.group})</p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">${breaksText}</p>
-                    </div>
-                    <button class="delete-booking-btn bg-danger-red hover:bg-red-700 text-white text-xs font-semibold py-1 px-3 rounded-lg transition-colors"
-                            data-name="${emp.name}" data-shift="${emp.shift}">
-                        حذف الحجز اليومي
-                    </button>
-                </div>
-            `;
-        }).join('');
+        <!-- Memory Game -->
+        <div class="game" id="memoryGame">
+          <div id="memoryStatus"></div>
+          <div id="memoryBoard"></div>
+          <button id="memoryResetBtn">إعادة تشغيل الذاكرة</button>
+        </div>
 
-        adminList.innerHTML = htmlContent;
-    }
+        <!-- Catch Game -->
+        <div class="game" id="catchGameContainer" style="text-align:center;">
+          <div id="catchGame">
+            <div id="catchBox"></div>
+          </div>
+          <div id="catchScore">النقاط: 0</div>
+          <button id="catchResetBtn">إعادة تشغيل اضغط المربع</button>
+        </div>
 
-    // إدراج إعدادات السعة قبل قائمة الحجوزات
-    document.getElementById('adminSettingsContainer').innerHTML = settingsHtml;
+        <!-- Dinosaur Game -->
+        <div class="game" id="dinoGameContainer" style="text-align:center;">
+          <canvas id="dinoCanvas" width="500" height="150" tabindex="0"></canvas>
+          <button id="dinoResetBtn">إعادة تشغيل الديناصور</button>
+        </div>
+      </div>
+    </div>
 
-    rebindAdminEvents();
-}        
-        /**
-         * ربط أحداث الحذف الديناميكية.
-         */
-/**
- * ربط أحداث الحذف والحفظ الديناميكية.
- * ⭐️⭐️ تم التعديل لربط حدث زر حفظ السعة ⭐️⭐️
- */
-function rebindAdminEvents() {
-    // ربط زر حفظ السعة
-    const saveBtn = document.getElementById('saveCapacityBtn');
-    if(saveBtn) {
-        saveBtn.onclick = () => {
-            const capacityInput = document.getElementById('slotCapacityInput');
-            const newCapacity = parseInt(capacityInput.value, 10);
-            if (newCapacity && newCapacity > 0) {
-                MAX_BOOKINGS_PER_SLOT = newCapacity;
-                localStorage.setItem('slotCapacity', newCapacity); // حفظ في ذاكرة المتصفح
-                showNotification(`تم تحديث سعة البريك بنجاح إلى ${newCapacity} موظفين.`, 'success');
-                renderTimeSlots(); // إعادة عرض البريكات بالسعة الجديدة فوراً
-            } else {
-                showNotification('الرجاء إدخال رقم صحيح أكبر من صفر.', 'error');
-            }
-        };
-    }
+    <script>
+      // ******************
+      // عداد الوقت للتطوير
+      // ******************
+      const targetDate = new Date("2025-10-25T12:00:00").getTime();
+      const timerEl = document.getElementById("timer");
 
-    // ربط أزرار الحذف
-    document.querySelectorAll('.delete-booking-btn').forEach(button => {
-        button.onclick = async () => {
-            const name = button.getAttribute('data-name');
-            const shift = button.getAttribute('data-shift');
+      function updateTimer() {
+        const now = new Date().getTime();
+        const distance = targetDate - now;
 
-            if (confirm(`هل أنت متأكد من حذف حجز الموظف ${name} لوردية ${shift} لهذا اليوم؟`)) {
-                await window.deleteEmployeeBookings(name, shift);
-            }
-        };
-    });
-    adminLogoutButton.onclick = adminLogout;
-}
-        // *************************************************************************
-        // ********************** وظائف التخصيص (THEME FUNCTIONS) *******************
-        // *************************************************************************
-
-        function toggleTheme() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeToggleIcon(isDark);
+        if (distance <= 0) {
+          timerEl.textContent = "انتهى التحديث!";
+          clearInterval(interval);
+          return;
         }
 
-        function applyInitialTheme() {
-            const storedTheme = localStorage.getItem('theme');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const initialTheme = storedTheme === 'dark' || (storedTheme === null && prefersDark);
-            
-            if (initialTheme) {
-                document.documentElement.classList.add('dark');
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor(
+          (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        );
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        timerEl.textContent = `${days} يوم ${hours
+          .toString()
+          .padStart(2, "0")} : ${minutes.toString().padStart(2, "0")} : ${seconds
+          .toString()
+          .padStart(2, "0")}`;
+      }
+
+      const interval = setInterval(updateTimer, 1000);
+      updateTimer();
+
+      // ******************
+      // زر تشغيل الألعاب
+      // ******************
+      const playBtn = document.getElementById("playBtn");
+      const gamesSection = document.getElementById("gamesSection");
+
+      playBtn.addEventListener("click", () => {
+        playBtn.style.display = "none";
+        gamesSection.style.display = "block";
+      });
+
+      // ******************
+      // نظام التبويبات
+      // ******************
+      const tabs = document.querySelectorAll(".tab");
+      const games = document.querySelectorAll(".game");
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("active"));
+          games.forEach((g) => g.classList.remove("active"));
+
+          tab.classList.add("active");
+          const target = document.getElementById(tab.dataset.target);
+          target.classList.add("active");
+
+          // إعادة تشغيل اللعبة المختارة تلقائياً
+          switch (tab.dataset.target) {
+            case "xoGame":
+              resetXO();
+              break;
+            case "memoryGame":
+              resetMemory();
+              break;
+            case "catchGameContainer":
+              resetCatch();
+              break;
+            case "dinoGameContainer":
+              resetDino();
+              break;
+          }
+        });
+      });
+
+      // ******************
+      // لعبة XO ذكي
+      // ******************
+      const xoBoard = document.getElementById("xoBoard");
+      const xoStatus = document.getElementById("xoStatus");
+      const xoResetBtn = document.getElementById("xoResetBtn");
+
+      let xoBoardState = Array(9).fill(null);
+      let xoTurn = "X"; // المستخدم يبدأ بـ X
+      let xoGameOver = false;
+
+      function checkXOWinner(board) {
+        const lines = [
+          [0, 1, 2],
+          [3, 4, 5],
+          [6, 7, 8],
+          [0, 3, 6],
+          [1, 4, 7],
+          [2, 5, 8],
+          [0, 4, 8],
+          [2, 4, 6],
+        ];
+        for (let line of lines) {
+          const [a, b, c] = line;
+          if (
+            board[a] &&
+            board[a] === board[b] &&
+            board[a] === board[c]
+          ) {
+            return board[a];
+          }
+        }
+        if (board.every((cell) => cell !== null)) return "tie";
+        return null;
+      }
+
+      function xoMakeMove(index, player) {
+        if (xoBoardState[index] || xoGameOver) return false;
+        xoBoardState[index] = player;
+        renderXO();
+        return true;
+      }
+
+      function xoComputerMove() {
+        // استخدام Minimax لخوارزمية ذكية
+        function minimax(board, player) {
+          const winner = checkXOWinner(board);
+          if (winner === "X") return { score: -10 };
+          if (winner === "O") return { score: 10 };
+          if (winner === "tie") return { score: 0 };
+
+          let moves = [];
+
+          for (let i = 0; i < board.length; i++) {
+            if (!board[i]) {
+              let newBoard = board.slice();
+              newBoard[i] = player;
+              let result = minimax(newBoard, player === "O" ? "X" : "O");
+              moves.push({ index: i, score: result.score });
             }
-            updateThemeToggleIcon(initialTheme);
+          }
+
+          if (player === "O") {
+            // Maximize
+            let maxMove = moves.reduce(
+              (max, move) => (move.score > max.score ? move : max),
+              moves[0]
+            );
+            return maxMove;
+          } else {
+            // Minimize
+            let minMove = moves.reduce(
+              (min, move) => (move.score < min.score ? move : min),
+              moves[0]
+            );
+            return minMove;
+          }
         }
 
-        function updateThemeToggleIcon(isDark) {
-            const iconHtml = isDark 
-                ? '<i data-feather="sun" class="w-5 h-5"></i> وضع الإضاءة' 
-                : '<i data-feather="moon" class="w-5 h-5"></i> الوضع الداكن';
-            themeToggle.innerHTML = iconHtml;
-            feather.replace();
+        if (xoGameOver) return;
+
+        const move = minimax(xoBoardState, "O");
+        if (move && move.index !== undefined) {
+          xoMakeMove(move.index, "O");
+          xoTurn = "X";
+          xoStatus.textContent = "دورك: X";
+          checkXOGameStatus();
+        }
+      }
+
+      function checkXOGameStatus() {
+        const winner = checkXOWinner(xoBoardState);
+        if (winner === "X") {
+          xoStatus.textContent = "تهانينا! فزت! 🎉";
+          xoGameOver = true;
+        } else if (winner === "O") {
+          xoStatus.textContent = "خسرت! الكمبيوتر فاز.";
+          xoGameOver = true;
+        } else if (winner === "tie") {
+          xoStatus.textContent = "تعادل!";
+          xoGameOver = true;
+        }
+      }
+
+      function renderXO() {
+        xoBoard.innerHTML = "";
+        xoBoardState.forEach((cell, idx) => {
+          const div = document.createElement("div");
+          div.classList.add("xoCell");
+          div.textContent = cell ? cell : "";
+          div.addEventListener("click", () => {
+            if (xoGameOver || xoTurn !== "X" || xoBoardState[idx]) return;
+            xoMakeMove(idx, "X");
+            xoTurn = "O";
+            xoStatus.textContent = "دور الكمبيوتر...";
+            checkXOGameStatus();
+            if (!xoGameOver) {
+              setTimeout(() => {
+                xoComputerMove();
+              }, 500);
+            }
+          });
+          xoBoard.appendChild(div);
+        });
+      }
+
+      function resetXO() {
+        xoBoardState = Array(9).fill(null);
+        xoTurn = "X";
+        xoGameOver = false;
+        xoStatus.textContent = "دورك: X";
+        renderXO();
+      }
+
+      xoResetBtn.addEventListener("click", resetXO);
+      resetXO();
+
+      // ******************
+      // لعبة الذاكرة
+      // ******************
+      const memoryBoard = document.getElementById("memoryBoard");
+      const memoryStatus = document.getElementById("memoryStatus");
+      const memoryResetBtn = document.getElementById("memoryResetBtn");
+
+      const memorySymbols = ["🍎", "🍌", "🍇", "🍓", "🍒", "🥝"];
+      let memoryCards = [];
+      let flippedCards = [];
+      let matchedCards = [];
+      let memoryBusy = false;
+
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          let j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function createMemoryBoard() {
+        memoryCards = [...memorySymbols, ...memorySymbols];
+        shuffle(memoryCards);
+        memoryBoard.innerHTML = "";
+        memoryCards.forEach((symbol, idx) => {
+          const card = document.createElement("div");
+          card.classList.add("memoryCard");
+          card.dataset.symbol = symbol;
+          card.textContent = "";
+          card.addEventListener("click", () => {
+            if (memoryBusy) return;
+            if (flippedCards.includes(card) || matchedCards.includes(card)) return;
+            flipCard(card);
+          });
+          memoryBoard.appendChild(card);
+        });
+      }
+
+      function flipCard(card) {
+        card.textContent = card.dataset.symbol;
+        card.classList.add("flipped");
+        flippedCards.push(card);
+        if (flippedCards.length === 2) {
+          memoryBusy = true;
+          setTimeout(() => {
+            checkMemoryMatch();
+          }, 1000);
+        }
+      }
+
+      function checkMemoryMatch() {
+        const [c1, c2] = flippedCards;
+        if (c1.dataset.symbol === c2.dataset.symbol) {
+          matchedCards.push(c1, c2);
+          memoryStatus.textContent = `مبروك! وجدت زوجًا من ${c1.dataset.symbol}`;
+          if (matchedCards.length === memoryCards.length) {
+            memoryStatus.textContent = "لقد أكملت لعبة الذاكرة!";
+          }
+        } else {
+          c1.textContent = "";
+          c2.textContent = "";
+          c1.classList.remove("flipped");
+          c2.classList.remove("flipped");
+          memoryStatus.textContent = "حاول مرة أخرى.";
+        }
+        flippedCards = [];
+        memoryBusy = false;
+      }
+
+      function resetMemory() {
+        flippedCards = [];
+        matchedCards = [];
+        memoryBusy = false;
+        memoryStatus.textContent = "";
+        createMemoryBoard();
+      }
+
+      memoryResetBtn.addEventListener("click", resetMemory);
+      resetMemory();
+
+      // ******************
+      // لعبة اضغط المربع
+      // ******************
+      const catchGame = document.getElementById("catchGame");
+      const catchBox = document.getElementById("catchBox");
+      const catchScoreEl = document.getElementById("catchScore");
+      const catchResetBtn = document.getElementById("catchResetBtn");
+
+      let catchScore = 0;
+
+      function randomPosition() {
+        const maxX = catchGame.clientWidth - catchBox.clientWidth;
+        const maxY = catchGame.clientHeight - catchBox.clientHeight;
+        const x = Math.floor(Math.random() * maxX);
+        const y = Math.floor(Math.random() * maxY);
+        return { x, y };
+      }
+
+      function moveCatchBox() {
+        const pos = randomPosition();
+        catchBox.style.left = pos.x + "px";
+        catchBox.style.top = pos.y + "px";
+      }
+
+      catchBox.addEventListener("click", () => {
+        if (catchScore >= 30) return; // حد نقاط
+        catchScore++;
+        catchScoreEl.textContent = `النقاط: ${catchScore}`;
+        moveCatchBox();
+      });
+
+      function resetCatch() {
+        catchScore = 0;
+        catchScoreEl.textContent = "النقاط: 0";
+        moveCatchBox();
+      }
+
+      catchResetBtn.addEventListener("click", resetCatch);
+      resetCatch();
+
+      // ******************
+      // لعبة الديناصور مع مراحل
+      // ******************
+
+      const canvas = document.getElementById("dinoCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const dino = {
+        x: 50,
+        y: 0,
+        width: 40,
+        height: 40,
+        yVelocity: 0,
+        gravity: 0.7,
+        jumpStrength: -14,
+        isJumping: false,
+      };
+
+      let obstacles = [];
+      let dinoGameOver = false;
+      let dinoScore = 0;
+      let dinoSpeed = 6;
+      let dinoFrameCount = 0;
+      let dinoLevel = 1;
+
+      const levelBackgrounds = [
+        "#1a1a1a",
+        "#2a2a72",
+        "#3a6ea5",
+        "#5a9bd4",
+        "#7ab8ff",
+      ];
+
+      function resetDino() {
+        dino.y = canvas.height - dino.height - 10;
+        dino.yVelocity = 0;
+        dino.isJumping = false;
+        obstacles = [];
+        dinoGameOver = false;
+        dinoScore = 0;
+        dinoSpeed = 6;
+        dinoFrameCount = 0;
+        dinoLevel = 1;
+        canvas.style.backgroundColor = levelBackgrounds[0];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.focus();
+        animateDino();
+      }
+
+      function drawDino() {
+        ctx.fillStyle = "#ff9800";
+        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+      }
+
+      function drawObstacle(obs) {
+        ctx.fillStyle = "#ff5722";
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      }
+
+      function updateBackground() {
+        const bgColor =
+          levelBackgrounds[Math.min(dinoLevel - 1, levelBackgrounds.length - 1)];
+        canvas.style.backgroundColor = bgColor;
+      }
+
+      function gameOverDino() {
+        dinoGameOver = true;
+        ctx.font = "30px Tajawal, sans-serif";
+        ctx.fillStyle = "#eee";
+        ctx.textAlign = "center";
+        ctx.fillText("انتهت اللعبة! اضغط إعادة اللعب.", canvas.width / 2, canvas.height / 2);
+      }
+
+      function animateDino() {
+        if (dinoGameOver) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        updateBackground();
+
+        // Dino physics
+        dino.yVelocity += dino.gravity;
+        dino.y += dino.yVelocity;
+
+        if (dino.y > canvas.height - dino.height - 10) {
+          dino.y = canvas.height - dino.height - 10;
+          dino.yVelocity = 0;
+          dino.isJumping = false;
         }
 
-        // *************************************************************************
-        // ********************** تهيئة التطبيق (APP INITIALIZATION) ******************
-        // *************************************************************************
+        drawDino();
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('enterGroupButton').addEventListener('click', enterGroup);
-            
-            // ربط أحداث العودة
-            document.getElementById('goBackToGroupButton').addEventListener('click', window.goBackToGroupSelection);
-            document.getElementById('goBackToShiftButton').addEventListener('click', window.goBackToShiftSelection);
-            
-            groupNameInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') {
-                    enterGroup();
-                }
-            });
-            
-            // ربط أحداث "حجوزاتي"
-            myBookingsToggle.addEventListener('click', window.showMyBookings);
-            myBookingsBackButton.addEventListener('click', window.showGroupSelection);
-            viewMyBookingsButton.addEventListener('click', window.fetchAndRenderMyBookings);
-            
-            [myBookingsGroupNameInput, myBookingsEmployeeNameInput].forEach(input => {
-                input.addEventListener('keyup', (e) => {
-                     if (e.key === 'Enter') {
-                         window.fetchAndRenderMyBookings();
-                     }
-                });
-            });
+        // Handle obstacles
+        if (dinoFrameCount % 90 === 0) {
+          // كل 90 إطار يظهر عائق جديد
+          let obsHeight = 30 + Math.random() * 30;
+          obstacles.push({
+            x: canvas.width,
+            y: canvas.height - obsHeight - 10,
+            width: 20,
+            height: obsHeight,
+          });
+        }
 
+        obstacles.forEach((obs, idx) => {
+          obs.x -= dinoSpeed;
+          drawObstacle(obs);
 
-            // ربط الأحداث الرئيسية للحجز
-            confirmButton.addEventListener('click', confirmReservation);
-            employeeName.addEventListener('input', () => {
-                const isThreeBreaks = selectedBreaks.length === MAX_TOTAL_BREAKS;
-                const isCorrectDurationOrder = isThreeBreaks && selectedBreaks.every((b, i) => b.duration === REQUIRED_ORDER[i]);
-                const isTimeOrderValid = isSelectionTimeOrderCorrect(selectedBreaks);
-                confirmButton.disabled = !(isCorrectDurationOrder && isTimeOrderValid && employeeName.value.trim());
-            });
-            
-            // ربط أحداث الإدارة
-            adminToggle.addEventListener('click', openAdminModal);
-            adminLoginButton.addEventListener('click', checkAdminLogin);
-            rebindAdminEvents(); 
-            adminCode.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') {
-                    checkAdminLogin();
-                }
-            });
-            
-            // ربط حدث تبديل الوضع
-            themeToggle.addEventListener('click', toggleTheme);
+          // تصادم
+          if (
+            dino.x < obs.x + obs.width &&
+            dino.x + dino.width > obs.x &&
+            dino.y < obs.y + obs.height &&
+            dino.y + dino.height > obs.y
+          ) {
+            gameOverDino();
+          }
 
-            // تطبيق الوضع الأولي وبدء حلقة المؤقت
-            applyInitialTheme();
-            startTimerLoop();
-            window.updateAllTimers(); 
-            
-            // إظهار الواجهة الافتراضية عند التحميل
-            window.showGroupSelection();
+          // إزالة العوائق بعد خروجها من الشاشة
+          if (obs.x + obs.width < 0) {
+            obstacles.splice(idx, 1);
+            dinoScore++;
+            if (dinoScore % 10 === 0) {
+              dinoLevel++;
+              dinoSpeed += 1;
+              updateBackground();
+            }
+          }
         });
 
+        // عرض النقاط والمستوى
+        ctx.font = "18px Tajawal, sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "left";
+        ctx.fillText(`النقاط: ${dinoScore}`, 10, 25);
+        ctx.fillText(`المستوى: ${dinoLevel}`, 10, 50);
+
+        dinoFrameCount++;
+        requestAnimationFrame(animateDino);
+      }
+
+      // القفز
+      canvas.addEventListener("keydown", (e) => {
+        if ((e.code === "Space" || e.code === "ArrowUp") && !dino.isJumping && !dinoGameOver) {
+          dino.yVelocity = dino.jumpStrength;
+          dino.isJumping = true;
+        }
+      });
+
+      document.getElementById("dinoResetBtn").addEventListener("click", resetDino);
+
+      resetDino();
     </script>
-</head>
-<body class="transition-all duration-300">
-    
-    <div id="notification" class="fixed top-0 left-1/2 transform -translate-x-1/2 p-3 rounded-b-lg shadow-lg font-medium transition-all duration-300 z-50 hidden">
-        تمت العملية بنجاح.
-    </div>
-    
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <header class="flex justify-between items-center mb-6 border-b pb-4 border-black-200 dark:border-yellow-700">
-            <h1 class="text-3xl font-extrabold text-primary-indigo dark:text-white">Break Time</h1>
-            <div class="flex items-center space-x-4 space-x-reverse">
-                <span id="currentTimeDisplay" class="text-sm font-medium text-gray-700 dark:text-gray-300"></span>
-                <button id="myBookingsToggle" class="flex items-center space-x-2 space-x-reverse p-2 rounded-lg bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-indigo-700 dark:text-indigo-300 transition-colors text-sm font-medium">
-                    <i data-feather="calendar" class="w-5 h-5"></i> <span>حجوزاتي</span>
-                </button>
-                <button id="themeToggle" class="flex items-center space-x-2 space-x-reverse p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors text-sm">
-                    <i data-feather="moon" class="w-5 h-5"></i> <span>الوضع الداكن</span>
-                </button>
-                <button id="adminToggle" class="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors text-sm font-medium">
-                    <i data-feather="shield" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </header>
-
-        <section id="groupSelection" class="hidden bg-white dark:bg-gray-800 shadow-xl rounded-xl p-8 max-w-lg mx-auto mb-8 transition-opacity duration-500">
-            <h2 class="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-white"> مرحباً بك!</h2>
-            <p class="text-center text-gray-600 dark:text-gray-400 mb-6">أدخل أسم القسم لحجز بريكات اليوم.</p>
-            <div class="flex flex-col space-y-4">
-                <input type="text" id="groupNameInput" placeholder="مثال: SMS, CHAT, CA03" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white uppercase text-center font-bold" />
-                <button id="enterGroupButton" class="bg-primary-indigo hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors">
-                    الدخول إلى القسم وحجز البريكات
-                </button>
-            </div>
-        </section>
-        
-        <section id="myBookingsSection" class="hidden bg-white dark:bg-gray-800 shadow-xl rounded-xl p-8 max-w-4xl mx-auto mb-8 transition-opacity duration-500">
-             <div class="flex justify-between items-center mb-4 border-b pb-3">
-                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white">جدول الحجوزات </h2>
-                 <button id="myBookingsBackButton" class="flex items-center space-x-2 space-x-reverse text-sm font-medium back-button-style py-2 px-3 rounded-lg shadow-sm">
-                     <i data-feather="arrow-right" class="w-4 h-4"></i>
-                     <span>العودة إلى شاشة البداية</span>
-                 </button>
-             </div>
-             
-             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                 <div class="col-span-1">
-                     <label for="myBookingsGroupNameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم القسم</label>
-                     <input type="text" id="myBookingsGroupNameInput" placeholder="مثال: SMS" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-secondary-green focus:border-secondary-green dark:bg-gray-700 dark:text-white uppercase text-center font-bold" />
-                 </div>
-                 <div class="col-span-1">
-                     <label for="myBookingsEmployeeNameInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسمك الشخصي</label>
-                     <input type="text" id="myBookingsEmployeeNameInput" placeholder="اسمك الكامل هنا" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-secondary-green focus:border-secondary-green dark:bg-gray-700 dark:text-white font-medium" />
-                 </div>
-                 <div class="col-span-1 flex items-end">
-                     <button id="viewMyBookingsButton" class="w-full bg-secondary-green hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors">
-                         عرض الجدول
-                     </button>
-                 </div>
-             </div>
-             
-             <p id="myBookingsStatus" class="text-center text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">أدخل بياناتك لعرض حجوزات قسمك.</p>
-             <div id="myBookingsListContainer" class="min-h-[200px] bg-gray-50 dark:bg-gray-900 rounded-xl p-4">
-                 </div>
-        </section>
-
-
-        <section id="shiftSelection" class="hidden mb-8 transition-opacity duration-500">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">اختر ورديتك الحالية (قسم: <span id="currentGroupNameDisplay" class="text-secondary-green"></span>)</h2>
-                <button id="goBackToGroupButton" class="flex items-center space-x-2 space-x-reverse text-sm font-medium back-button-style py-2 px-3 rounded-lg shadow-sm">
-                    <i data-feather="arrow-right" class="w-4 h-4"></i>
-                    <span>العودة لاختيار القسم</span>
-                </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div id="morningShift" class="shift-card bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-transparent cursor-pointer hover:shadow-xl transition-all duration-300" onclick="selectShift('morning')">
-                    <div class="text-center">
-                        <i data-feather="sun" class="w-10 h-10 text-primary-indigo mx-auto mb-3"></i>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">الوردية الصباحية</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">حجز البريكات من 10:00 ص إلى 4:00 م</p>
-                    </div>
-                </div>
-                <div id="eveningShift" class="shift-card bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-transparent cursor-pointer hover:shadow-xl transition-all duration-300" onclick="selectShift('evening')">
-                    <div class="text-center">
-                        <i data-feather="moon" class="w-10 h-10 text-primary-indigo mx-auto mb-3"></i>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">الوردية المسائية</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">حجز البريكات من 4:00 م إلى 10:00 م</p>
-                    </div>
-                </div>
-                <div id="chat24hrShift" class="shift-card bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border-2 border-transparent cursor-pointer hover:shadow-xl transition-all duration-300" onclick="selectShift('24hr')">
-                    <div class="text-center relative">
-                         <div id="chatShiftOverlay" class="absolute inset-0 flex items-center justify-center bg-gray-900/10 dark:bg-gray-900/70 rounded-lg backdrop-blur-sm z-10 hidden">
-                             <span class="text-xs font-semibold text-red-700 dark:text-red-300 bg-white/90 dark:bg-gray-700/90 p-2 rounded-md shadow-lg">مخصصة لقسم CHAT فقط</span>
-                         </div>
-                        <i data-feather="clock" class="w-10 h-10 text-secondary-green mx-auto mb-3"></i>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">وردية 24 ساعة</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">نظام مفتوح للبريكات</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="breakSelection" class="hidden mb-8 transition-opacity duration-500">
-             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">حجز البريكات اليومية</h2>
-                <button id="goBackToShiftButton" class="flex items-center space-x-2 space-x-reverse text-sm font-medium back-button-style py-2 px-3 rounded-lg shadow-sm">
-                    <i data-feather="arrow-right" class="w-4 h-4"></i>
-                    <span>العودة لاختيار الوردية</span>
-                </button>
-            </div>
-            <div class="bg-white dark:bg-gray-800 shadow-xl rounded-xl p-6 mb-6">
-                <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 md:space-x-reverse items-center">
-                    <div class="flex-grow w-full md:w-auto">
-                        <label for="employeeName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم الموظف (الكامل)</label>
-                        <input type="text" id="employeeName" placeholder="الاسم هنا" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white font-medium" />
-                    </div>
-                    <div class="flex-shrink-0">
-                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريكات المختارة</p>
-                        <div class="flex items-center justify-center p-3 border border-indigo-300 dark:border-indigo-700 rounded-lg bg-indigo-50 dark:bg-indigo-900/50">
-                            <span id="selectedCount" class="text-2xl font-extrabold text-primary-indigo dark:text-indigo-400">0</span>
-                            <span class="text-lg font-medium text-gray-600 dark:text-gray-400 mr-2">/ 3</span>
-                        </div>
-                    </div>
-                    <div class="flex-shrink-0 w-full md:w-auto">
-                        <p class="text-sm font-medium text-red-600 dark:text-red-400 mb-1 text-center">الترتيب الإجباري: 15د، ثم 30د، ثم 15د</p>
-                        <button id="confirmButton" class="w-full bg-secondary-green hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                            تأكيد الحجز الآن
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="timeSlotsContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 no-scrollbar max-h-[500px] overflow-y-auto p-4 rounded-xl bg-gray-50 dark:bg-gray-900 shadow-inner">
-                <p class="col-span-full text-center text-gray-500 dark:text-gray-400">اختر وردية لبدء الحجز</p>
-            </div>
-        </section>
-
-        <section id="scheduleDisplay" class="hidden transition-opacity duration-500">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-r-4 border-primary-indigo dark:border-indigo-600">
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">الموظفين المنجزين (القسم <span id="summaryShiftName"></span>)</p>
-                    <span id="bookedEmployeesCount" class="text-3xl font-extrabold text-gray-900 dark:text-white">0</span>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-r-4 border-secondary-green dark:border-green-600">
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">بريكات 15 دقيقة متاحة</p>
-                    <span id="available15MinBreaks" class="text-3xl font-extrabold text-secondary-green dark:text-green-400">0</span>
-                </div>
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border-r-4 border-danger-red dark:border-red-600">
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">بريكات 30 دقيقة متاحة</p>
-                    <span id="available30MinBreaks" class="text-3xl font-extrabold text-danger-red dark:text-red-400">0</span>
-                </div>
-            </div>
-
-            <h2 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">جدول حجوزات اليوم</h2>
-            <div class="bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                <div class="grid grid-cols-12 text-center font-bold text-sm text-white bg-primary-indigo dark:bg-indigo-900/70 p-3 border-b-2 border-indigo-700 dark:border-indigo-900">
-                    <div class="col-span-3">الموظف</div>
-                    <div class="col-span-3">البريك الأول (15 د)</div>
-                    <div class="col-span-3">البريك الثاني (30 د - غداء)</div>
-                    <div class="col-span-3">البريك الثالث (15 د)</div>
-                </div>
-                <div id="scheduleContent">
-                    </div>
-            </div>
-        </section>
-
-        <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm hidden z-50 transition-opacity duration-300">
-            <div class="flex items-center justify-center h-full">
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-xl w-full mx-4">
-                    <div class="flex justify-between items-center border-b pb-3 mb-4">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">منطقة الإدارة</h3>
-                        <button onclick="closeAdminModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            <i data-feather="x" class="w-6 h-6"></i>
-                        </button>
-                    </div>
-
-                    <div id="adminLoginForm">
-                        <p class="text-gray-600 dark:text-gray-400 mb-3">الرجاء إدخال رمز المدير للمتابعة.</p>
-                        <input type="password" id="adminCode" placeholder="رمز المدير" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white font-medium mb-4" />
-                        <button id="adminLoginButton" class="w-full bg-primary-indigo hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors">
-                            تسجيل الدخول
-                        </button>
-                    </div>
-
-<div id="adminContent" class="hidden">
-    <div id="adminSettingsContainer" class="mb-4"></div>
-
-    <p class="text-sm font-semibold text-red-600 dark:text-red-400 mb-4">⚠️ تنبيه: الحذف هنا يؤثر على حجوزات اليوم الحالي فقط.</p>
-    <div id="adminBookingsList" class="max-h-80 overflow-y-auto no-scrollbar border border-gray-200 dark:border-gray-700 rounded-lg">
-        </div>
-    <button id="adminLogoutButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 mt-4 rounded-lg transition-colors">
-        تسجيل الخروج من الإدارة
-    </button>
-</div>                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-    </div>
-</body>
+  </body>
 </html>
