@@ -1,241 +1,574 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <title>BreakTime</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Tajawal&display=swap"
-      rel="stylesheet"
-    />
+    <title>BreakTime - استراحة الألعاب</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
-      *, *::before, *::after {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        min-height: 100vh;
-        font-family: "Tajawal", sans-serif;
-        background: linear-gradient(
-            rgba(0, 0, 0, 0.5),
-            rgba(0, 0, 0, 0.5)
-          ),
-          url("https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1950&q=80")
-            no-repeat center center/cover;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px;
-      }
-      .container {
-        background: rgba(0, 0, 0, 0.9);
-        border-radius: 15px;
-        padding: 20px 30px;
-        max-width: 700px;
-        width: 100%;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
-      }
-      h1 {
-        font-size: 2.5rem;
-        margin-bottom: 10px;
-        text-align: center;
-      }
-      p {
-        font-size: 1.2rem;
-        margin-bottom: 20px;
-        text-align: center;
-      }
-      #timer {
-        font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 25px;
-        text-align: center;
-      }
+        :root {
+            --primary: #ff9800;
+            --primary-dark: #e67e22;
+            --secondary: #2a2a72;
+            --dark: #111;
+            --light: #f5f5f5;
+            --success: #4caf50;
+            --danger: #f44336;
+            --warning: #ffc107;
+        }
 
-      /* Tabs style */
-      .tabs {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 20px;
-      }
-      .tab {
-        padding: 10px 18px;
-        border-radius: 10px;
-        cursor: pointer;
-        background: #222;
-        color: #eee;
-        font-weight: bold;
-        user-select: none;
-        transition: background 0.3s ease;
-      }
-      .tab.active,
-      .tab:hover {
-        background: #ff9800;
-        color: #111;
-      }
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-      /* Games container */
-      .game {
-        display: none;
-      }
-      .game.active {
-        display: block;
-      }
+        body {
+            min-height: 100vh;
+            font-family: "Tajawal", sans-serif;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                        url("https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1950&q=80") no-repeat center center/cover;
+            color: var(--light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
 
-      /* XO Game */
-      #xoBoard {
-        display: grid;
-        grid-template-columns: repeat(3, 80px);
-        grid-template-rows: repeat(3, 80px);
-        gap: 8px;
-        justify-content: center;
-        margin-bottom: 10px;
-      }
-      .xoCell {
-        background: #333;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 2.8rem;
-        cursor: pointer;
-        border-radius: 10px;
-        user-select: none;
-        transition: background 0.3s ease;
-      }
-      .xoCell:hover {
-        background: #ffb74d;
-      }
-      #xoStatus {
-        margin-bottom: 10px;
-        font-weight: bold;
-        font-size: 1.1rem;
-      }
-      #xoResetBtn {
-        padding: 8px 15px;
-        border: none;
-        border-radius: 8px;
-        background: #ff9800;
-        color: #111;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.3s ease;
-      }
-      #xoResetBtn:hover {
-        background: #e67e22;
-      }
+        .container {
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 1s ease;
+        }
 
-      /* Memory Game */
-      #memoryBoard {
-        display: grid;
-        grid-template-columns: repeat(4, 80px);
-        grid-template-rows: repeat(3, 80px);
-        gap: 10px;
-        justify-content: center;
-        margin-bottom: 10px;
-      }
-      .memoryCard {
-        background: #333;
-        border-radius: 12px;
-        font-size: 2.2rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        user-select: none;
-        transition: background 0.3s ease;
-      }
-      .memoryCard.flipped {
-        background: #ff9800;
-        color: #111;
-        cursor: default;
-      }
-      #memoryStatus {
-        margin-bottom: 10px;
-        font-weight: bold;
-        font-size: 1.1rem;
-        min-height: 24px;
-      }
-      #memoryResetBtn {
-        padding: 8px 15px;
-        border: none;
-        border-radius: 8px;
-        background: #ff9800;
-        color: #111;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.3s ease;
-      }
-      #memoryResetBtn:hover {
-        background: #e67e22;
-      }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-      /* Catch Game */
-      #catchGame {
-        position: relative;
-        width: 350px;
-        height: 250px;
-        background: #222;
-        border-radius: 15px;
-        margin: 0 auto 10px;
-        user-select: none;
-        overflow: hidden;
-      }
-      #catchBox {
-        position: absolute;
-        width: 50px;
-        height: 50px;
-        background: #ff9800;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: background 0.2s ease;
-      }
-      #catchScore {
-        text-align: center;
-        margin-bottom: 10px;
-        font-weight: bold;
-        font-size: 1.1rem;
-      }
-      #catchResetBtn {
-        display: block;
-        margin: 0 auto;
-        padding: 8px 15px;
-        border: none;
-        border-radius: 8px;
-        background: #ff9800;
-        color: #111;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.3s ease;
-      }
-      #catchResetBtn:hover {
-        background: #e67e22;
-      }
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            text-align: center;
+            color: var(--primary);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            position: relative;
+            padding-bottom: 15px;
+        }
 
-      /* Dinosaur Game */
-      #dinoCanvas {
-        background-color: #1a1a1a;
-        border-radius: 12px;
-        display: block;
-        margin: 0 auto 10px;
-        user-select: none;
-      }
-      #dinoResetBtn {
-        display: block;
-        margin: 0 auto;
-        padding: 8px 15px;
-        border: none;
-        border-radius: 8px;
-        background: #ff9800;
-        color: #111;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.3s ease;
-      }
-      #dinoResetBtn:hover {
-        background: #e67e22;
-      }
+        h1::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            right: 50%;
+            transform: translateX(50%);
+            width: 100px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        p {
+            font-size: 1.3rem;
+            margin-bottom: 25px;
+            text-align: center;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        #timer {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 25px 0;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #timer::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 152, 0, 0.1), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Play Button */
+        #playBtn {
+            display: block;
+            margin: 0 auto 30px;
+            padding: 12px 30px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            background: var(--primary);
+            color: var(--dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #playBtn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.6);
+        }
+
+        #playBtn:active {
+            transform: translateY(1px);
+        }
+
+        #playBtn::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%, -50%);
+            transform-origin: 50% 50%;
+        }
+
+        #playBtn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(20, 20);
+                opacity: 0;
+            }
+        }
+
+        /* Tabs style */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            background: rgba(34, 34, 34, 0.8);
+            color: var(--light);
+            font-weight: bold;
+            user-select: none;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab i {
+            font-size: 1.1rem;
+        }
+
+        .tab.active,
+        .tab:hover {
+            background: var(--primary);
+            color: var(--dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+        }
+
+        /* Games container */
+        .game {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .game.active {
+            display: block;
+        }
+
+        /* Game Headers */
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .game-header h2 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .game-header p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 0;
+        }
+
+        /* Status Messages */
+        .game-status {
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .status-success {
+            color: var(--success);
+        }
+
+        .status-danger {
+            color: var(--danger);
+        }
+
+        .status-warning {
+            color: var(--warning);
+        }
+
+        /* XO Game */
+        #xoBoard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto 20px;
+            aspect-ratio: 1/1;
+        }
+
+        .xoCell {
+            background: rgba(51, 51, 51, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            cursor: pointer;
+            border-radius: 12px;
+            user-select: none;
+            transition: all 0.3s ease;
+            aspect-ratio: 1/1;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .xoCell:hover {
+            background: rgba(255, 183, 77, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+        }
+
+        .xoCell.x {
+            color: #4caf50;
+        }
+
+        .xoCell.o {
+            color: #f44336;
+        }
+
+        .xoCell::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .xoCell:hover::after {
+            opacity: 1;
+        }
+
+        /* Memory Game */
+        #memoryBoard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+            max-width: 400px;
+            margin: 0 auto 20px;
+            aspect-ratio: 4/3;
+        }
+
+        .memoryCard {
+            background: rgba(51, 51, 51, 0.8);
+            border-radius: 12px;
+            font-size: 2.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            aspect-ratio: 1/1;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+
+        .memoryCard .front,
+        .memoryCard .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+        }
+
+        .memoryCard .front {
+            background: rgba(51, 51, 51, 0.8);
+            transform: rotateY(0deg);
+        }
+
+        .memoryCard .back {
+            background: var(--primary);
+            color: var(--dark);
+            transform: rotateY(180deg);
+        }
+
+        .memoryCard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .memoryCard.matched {
+            background: var(--success);
+            color: white;
+            cursor: default;
+            transform: scale(0.95);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+
+        /* Catch Game */
+        #catchGame {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 250px;
+            background: rgba(34, 34, 34, 0.8);
+            border-radius: 15px;
+            margin: 0 auto 15px;
+            user-select: none;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #catchBox {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: var(--dark);
+        }
+
+        #catchBox:hover {
+            transform: scale(1.05);
+        }
+
+        #catchBox:active {
+            transform: scale(0.95);
+        }
+
+        /* Dinosaur Game */
+        #dinoCanvas {
+            background-color: var(--dark);
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto 15px;
+            user-select: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Reset Buttons */
+        .reset-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 50px;
+            background: var(--primary);
+            color: var(--dark);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
+        }
+
+        .reset-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+        }
+
+        .reset-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            p {
+                font-size: 1.1rem;
+            }
+            
+            #timer {
+                font-size: 1.8rem;
+            }
+            
+            .tabs {
+                gap: 10px;
+            }
+            
+            .tab {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+            
+            #xoBoard {
+                max-width: 280px;
+            }
+            
+            #memoryBoard {
+                max-width: 350px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #xoBoard {
+                max-width: 250px;
+            }
+            
+            #memoryBoard {
+                grid-template-columns: repeat(4, 1fr);
+                max-width: 300px;
+            }
+            
+            .memoryCard {
+                font-size: 2rem;
+            }
+            
+            #catchGame {
+                height: 200px;
+            }
+            
+            #catchBox {
+                width: 50px;
+                height: 50px;
+            }
+            
+            #dinoCanvas {
+                width: 100%;
+                height: 120px;
+            }
+        }
+
+        /* Particles Background */
+        .particles {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: var(--primary);
+            opacity: 0;
+            z-index: 1000;
+            animation: confetti 3s ease-out;
+        }
+
+        @keyframes confetti {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
     </style>
   </head>
   <body>
@@ -294,7 +627,7 @@
       // ******************
       // عداد الوقت للتطوير
       // ******************
-      const targetDate = new Date("2025-10-25T12:00:00").getTime();
+      const targetDate = new Date("2025-11-11T12:00:00").getTime();
       const timerEl = document.getElementById("timer");
 
       function updateTimer() {
