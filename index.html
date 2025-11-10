@@ -1,1124 +1,754 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8" />
-    <title>BreakTime</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <style>
-        :root {
-            --primary: #ff9800;
-            --primary-dark: #e67e22;
-            --secondary: #2a2a72;
-            --dark: #111;
-            --light: #f5f5f5;
-            --success: #4caf50;
-            --danger: #f44336;
-            --warning: #ffc107;
-        }
-
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            min-height: 100vh;
-            font-family: "Tajawal", sans-serif;
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
-                        url("https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1950&q=80") no-repeat center center/cover;
-            color: var(--light);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            overflow-x: hidden;
-        }
-
-        .container {
-            background: rgba(0, 0, 0, 0.85);
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 800px;
-            width: 100%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            animation: fadeIn 1s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h1 {
-            font-size: 2.8rem;
-            margin-bottom: 15px;
-            text-align: center;
-            color: var(--primary);
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-            position: relative;
-            padding-bottom: 15px;
-        }
-
-        h1::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            right: 50%;
-            transform: translateX(50%);
-            width: 100px;
-            height: 3px;
-            background: var(--primary);
-            border-radius: 3px;
-        }
-
-        p {
-            font-size: 1.3rem;
-            margin-bottom: 25px;
-            text-align: center;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        #timer {
-            font-size: 2.2rem;
-            font-weight: bold;
-            margin: 25px 0;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #timer::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent, rgba(255, 152, 0, 0.1), transparent);
-            animation: shine 3s infinite;
-        }
-
-        @keyframes shine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Play Button */
-        #playBtn {
-            display: block;
-            margin: 0 auto 30px;
-            padding: 12px 30px;
-            font-size: 1.4rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 50px;
-            background: var(--primary);
-            color: var(--dark);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #playBtn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.6);
-        }
-
-        #playBtn:active {
-            transform: translateY(1px);
-        }
-
-        #playBtn::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            right: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%, -50%);
-            transform-origin: 50% 50%;
-        }
-
-        #playBtn:focus:not(:active)::after {
-            animation: ripple 1s ease-out;
-        }
-
-        @keyframes ripple {
-            0% {
-                transform: scale(0, 0);
-                opacity: 0.5;
-            }
-            100% {
-                transform: scale(20, 20);
-                opacity: 0;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Break Time Buddy - جدول حجز البريكات للأقسام</title>
+    
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- تحميل Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <script>
+        // =========================================================================
+        //                 إعدادات Tailwind CSS المخصصة (Configuration)
+        // =========================================================================
+        // تحديد الثيمات والألوان الأساسية التي سيتم استخدامها في التصميم
+        tailwind.config = {
+            darkMode: 'class', // تفعيل الوضع الداكن بناءً على الكلاس 'dark' في عنصر <html>
+            theme: {
+                extend: {
+                    // تعريف ألوان مخصصة للنظام لسهولة تغيير الثيم
+                    colors: {
+                        'primary-indigo': '#4f46e5',   // اللون الأساسي: أزرق نيلي
+                        'secondary-green': '#10b981', // اللون الثانوي: أخضر لعمليات النجاح والحجز المتاح
+                        'danger-red': '#ef4444',      // لون الخطر: أحمر لعمليات الحذف أو الأخطاء
+                        'gold-star': '#facc15',       // لون الذهب: للتنبيهات والتحذيرات
+                        'light-blue': '#3b82f6',      // لون أزرق فاتح: للمعلومات والحالة
+                        'gray-dark-900': '#1f2937'    // لون داكن إضافي للخلفيات
+                    }
+                }
             }
         }
+    </script>
+<style>
+    /* تخصيص شريط التمرير لوضع المدير */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+</style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-dark-900 transition-colors duration-300 min-h-screen p-4">
 
-        /* Tabs style */
-        .tabs {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .tab {
-            padding: 12px 20px;
-            border-radius: 50px;
-            cursor: pointer;
-            background: rgba(34, 34, 34, 0.8);
-            color: var(--light);
-            font-weight: bold;
-            user-select: none;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .tab i {
-            font-size: 1.1rem;
-        }
-
-        .tab.active,
-        .tab:hover {
-            background: var(--primary);
-            color: var(--dark);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
-        }
-
-        /* Games container */
-        .game {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .game.active {
-            display: block;
-        }
-
-        /* Game Headers */
-        .game-header {
-            text-align: center;
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .game-header h2 {
-            font-size: 1.8rem;
-            color: var(--primary);
-            margin-bottom: 10px;
-        }
-
-        .game-header p {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 0;
-        }
-
-        /* Status Messages */
-        .game-status {
-            margin-bottom: 15px;
-            font-weight: bold;
-            font-size: 1.2rem;
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.3);
-        }
-
-        .status-success {
-            color: var(--success);
-        }
-
-        .status-danger {
-            color: var(--danger);
-        }
-
-        .status-warning {
-            color: var(--warning);
-        }
-
-        /* XO Game */
-        #xoBoard {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 10px;
-            max-width: 300px;
-            margin: 0 auto 20px;
-            aspect-ratio: 1/1;
-        }
-
-        .xoCell {
-            background: rgba(51, 51, 51, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 3.5rem;
-            cursor: pointer;
-            border-radius: 12px;
-            user-select: none;
-            transition: all 0.3s ease;
-            aspect-ratio: 1/1;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .xoCell:hover {
-            background: rgba(255, 183, 77, 0.3);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
-        }
-
-        .xoCell.x {
-            color: #4caf50;
-        }
-
-        .xoCell.o {
-            color: #f44336;
-        }
-
-        .xoCell::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .xoCell:hover::after {
-            opacity: 1;
-        }
-
-        /* Memory Game */
-        #memoryBoard {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 12px;
-            max-width: 400px;
-            margin: 0 auto 20px;
-            aspect-ratio: 4/3;
-        }
-
-        .memoryCard {
-            background: rgba(51, 51, 51, 0.8);
-            border-radius: 12px;
-            font-size: 2.5rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.3s ease;
-            aspect-ratio: 1/1;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-            perspective: 1000px;
-            transform-style: preserve-3d;
-        }
-
-        .memoryCard .front,
-        .memoryCard .back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-        }
-
-        .memoryCard .front {
-            background: rgba(51, 51, 51, 0.8);
-            transform: rotateY(0deg);
-        }
-
-        .memoryCard .back {
-            background: var(--primary);
-            color: var(--dark);
-            transform: rotateY(180deg);
-        }
-
-        .memoryCard.flipped {
-            transform: rotateY(180deg);
-        }
-
-        .memoryCard.matched {
-            background: var(--success);
-            color: white;
-            cursor: default;
-            transform: scale(0.95);
-            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
-        }
-
-        /* Catch Game */
-        #catchGame {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            height: 250px;
-            background: rgba(34, 34, 34, 0.8);
-            border-radius: 15px;
-            margin: 0 auto 15px;
-            user-select: none;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        #catchBox {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            background: var(--primary);
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.5rem;
-            color: var(--dark);
-        }
-
-        #catchBox:hover {
-            transform: scale(1.05);
-        }
-
-        #catchBox:active {
-            transform: scale(0.95);
-        }
-
-        /* Dinosaur Game */
-        #dinoCanvas {
-            background-color: var(--dark);
-            border-radius: 12px;
-            display: block;
-            margin: 0 auto 15px;
-            user-select: none;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Reset Buttons */
-        .reset-btn {
-            display: block;
-            margin: 20px auto 0;
-            padding: 10px 25px;
-            border: none;
-            border-radius: 50px;
-            background: var(--primary);
-            color: var(--dark);
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
-        }
-
-        .reset-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
-        }
-
-        .reset-btn:active {
-            transform: translateY(1px);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 2.2rem;
-            }
-            
-            p {
-                font-size: 1.1rem;
-            }
-            
-            #timer {
-                font-size: 1.8rem;
-            }
-            
-            .tabs {
-                gap: 10px;
-            }
-            
-            .tab {
-                padding: 10px 15px;
-                font-size: 0.9rem;
-            }
-            
-            #xoBoard {
-                max-width: 280px;
-            }
-            
-            #memoryBoard {
-                max-width: 350px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            #xoBoard {
-                max-width: 250px;
-            }
-            
-            #memoryBoard {
-                grid-template-columns: repeat(4, 1fr);
-                max-width: 300px;
-            }
-            
-            .memoryCard {
-                font-size: 2rem;
-            }
-            
-            #catchGame {
-                height: 200px;
-            }
-            
-            #catchBox {
-                width: 50px;
-                height: 50px;
-            }
-            
-            #dinoCanvas {
-                width: 100%;
-                height: 120px;
-            }
-        }
-
-        /* Particles Background */
-        .particles {
-            position: fixed;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        .particle {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        /* Floating Animation */
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .floating {
-            animation: float 3s ease-in-out infinite;
-        }
-
-        /* Pulse Animation */
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        /* Confetti */
-        .confetti {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            background-color: var(--primary);
-            opacity: 0;
-            z-index: 1000;
-            animation: confetti 3s ease-out;
-        }
-
-        @keyframes confetti {
-            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-        }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>🚧 الموقع تحت التطوير 🚧</h1>
-      <p>
-        نعتذر على الانقطاع المؤقت، نعمل على تحسينات مميزة ليظهر الموقع
-        قريباً.
-      </p>
-      <div id="timer">00 يوم 00 : 00 : 00</div>
-
-      <button id="playBtn" style="display: block; margin: 0 auto 30px; padding: 10px 20px; font-size: 1.3rem; font-weight: bold; border: none; border-radius: 12px; background: #ff9800; color: #111; cursor: pointer;">
-        🎮 العب الآن
-      </button>
-
-      <div id="gamesSection" style="display: none;">
-        <div class="tabs">
-          <div class="tab active" data-target="xoGame">XO ذكي</div>
-          <div class="tab" data-target="memoryGame">لعبة الذاكرة</div>
-          <div class="tab" data-target="catchGameContainer">اضغط المربع</div>
-          <div class="tab" data-target="dinoGameContainer">لعبة الديناصور</div>
-        </div>
-
-        <!-- XO Game -->
-        <div class="game active" id="xoGame">
-          <div id="xoStatus">دورك: X</div>
-          <div id="xoBoard"></div>
-          <button id="xoResetBtn">إعادة تشغيل XO</button>
-        </div>
-
-        <!-- Memory Game -->
-        <div class="game" id="memoryGame">
-          <div id="memoryStatus"></div>
-          <div id="memoryBoard"></div>
-          <button id="memoryResetBtn">إعادة تشغيل الذاكرة</button>
-        </div>
-
-        <!-- Catch Game -->
-        <div class="game" id="catchGameContainer" style="text-align:center;">
-          <div id="catchGame">
-            <div id="catchBox"></div>
-          </div>
-          <div id="catchScore">النقاط: 0</div>
-          <button id="catchResetBtn">إعادة تشغيل اضغط المربع</button>
-        </div>
-
-        <!-- Dinosaur Game -->
-        <div class="game" id="dinoGameContainer" style="text-align:center;">
-          <canvas id="dinoCanvas" width="500" height="150" tabindex="0"></canvas>
-          <button id="dinoResetBtn">إعادة تشغيل الديناصور</button>
-        </div>
-      </div>
+    <!-- رسالة التنبيه (Message Box) -->
+    <div id="messageBox" class="fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-2xl z-50 transition-opacity duration-300 flex items-center hidden opacity-0 min-w-[300px] text-center" role="alert">
+        <div id="messageIcon" class="flex-shrink-0"></div>
+        <span id="messageText" class="font-medium text-sm"></span>
     </div>
 
-    <script>
-      // ******************
-      // عداد الوقت للتطوير
-      // ******************
-      const targetDate = new Date("2025-11-11T12:00:00").getTime();
-      const timerEl = document.getElementById("timer");
-
-      function updateTimer() {
-        const now = new Date().getTime();
-        const distance = targetDate - now;
-
-        if (distance <= 0) {
-          timerEl.textContent = "انتهى التحديث!";
-          clearInterval(interval);
-          return;
-        }
-
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const hours = Math.floor(
-          (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-        );
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-        // ** التعديل يبدأ هنا **
-        function formatDays(d) {
-          if (d === 1) return "يوم";
-          if (d === 2) return "يومين";
-          if (d >= 3 && d <= 10) return "أيام"; // جمع (3-10)
-          // للأعداد الأكبر من 10 (مثل 90) أو الصفر
-          return "يوم";
-        }
+    <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-6 md:p-10">
         
-        const daysText = formatDays(days);
+        <!-- العنوان ومعرف المستخدم -->
+        <header class="text-center mb-8 border-b pb-4 border-gray-100 dark:border-gray-700">
+            <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
+                رفيق وقت البريك ☕
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400">
+                جدول حجز البريكات لليوم الحالي (من الساعة ٨ صباحاً إلى ٤ مساءً)
+            </p>
+            <div class="mt-3 text-xs text-gray-500 dark:text-gray-500">
+                معرّف المستخدم: <span id="userIdDisplay" class="font-mono text-xs text-primary-indigo dark:text-light-blue bg-gray-100 dark:bg-gray-700 p-1 rounded-md cursor-pointer" onclick="copyUserId()">Loading...</span>
+            </div>
+        </header>
 
-        timerEl.textContent = `${days} ${daysText} ${hours
-          .toString()
-          .padStart(2, "0")} : ${minutes.toString().padStart(2, "0")} : ${seconds
-          .toString()
-          .padStart(2, "0")}`;
-      }
-      const interval = setInterval(updateTimer, 1000);
-      updateTimer();
+        <!-- منطقة اختيار القسم وتعديل الإعدادات -->
+        <div class="mb-8 p-5 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-inner">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center justify-between">
+                <span>تعديل إعدادات الحجز</span>
+                <button id="adminButton" class="text-sm text-primary-indigo hover:text-indigo-700 dark:text-light-blue dark:hover:text-blue-400 font-medium flex items-center">
+                    <i data-feather="lock" class="w-4 h-4 ml-1"></i>
+                    وضع المدير
+                </button>
+            </h2>
+            
+            <!-- اختيار القسم (Department Selection) -->
+            <div class="mb-4">
+                <label for="departmentSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    القسم الحالي:
+                </label>
+                <select id="departmentSelect" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-800 dark:text-white font-medium">
+                    <option value="القسم 1">القسم 1</option>
+                    <option value="القسم 2">القسم 2</option>
+                    <option value="القسم 3">القسم 3</option>
+                </select>
+            </div>
 
-      // ******************
-      // زر تشغيل الألعاب
-      // ******************
-      const playBtn = document.getElementById("playBtn");
-      const gamesSection = document.getElementById("gamesSection");
+            <!-- إعدادات عدد البريكات (Settings) -->
+            <div class="flex items-center space-x-4 space-x-reverse">
+                <div class="flex-1">
+                    <label for="maxBreaksInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        عدد البريكات المسموح بها لكل شخص:
+                    </label>
+                    <input type="number" id="maxBreaksInput" value="1" min="1" max="5" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-800 dark:text-white font-medium" />
+                </div>
+                <div class="flex-1">
+                    <label for="breakDurationInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        مدة البريك (دقائق):
+                    </label>
+                    <select id="breakDurationInput" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-800 dark:text-white font-medium">
+                        <option value="15">15 دقيقة</option>
+                        <option value="20">20 دقيقة</option>
+                        <option value="30">30 دقيقة</option>
+                    </select>
+                </div>
+            </div>
+            
+        </div>
 
-      playBtn.addEventListener("click", () => {
-        playBtn.style.display = "none";
-        gamesSection.style.display = "block";
-      });
+        <!-- جدول الحجوزات -->
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            جدول البريكات المحجوزة
+        </h2>
+        
+        <!-- حاوية لعرض الجدول -->
+        <div id="bookingsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- سيتم إنشاء مربعات الحجز ديناميكياً هنا -->
+        </div>
+        
+        <!-- نموذج وضع المدير (Modal) -->
+        <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 z-40 hidden flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6 relative">
+                
+                <!-- عنوان وأزرار الإغلاق -->
+                <div class="flex justify-between items-center border-b pb-3 mb-4 dark:border-gray-700">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">وضع المدير</h3>
+                    <button id="closeAdminModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <i data-feather="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
 
-      // ******************
-      // نظام التبويبات
-      // ******************
-      const tabs = document.querySelectorAll(".tab");
-      const games = document.querySelectorAll(".game");
+                <!-- نموذج تسجيل الدخول للمدير -->
+                <div id="adminLoginForm">
+                    <p class="text-gray-600 dark:text-gray-400 mb-3">الرجاء إدخال رمز المدير للمتابعة.</p>
+                    <input type="password" id="adminCode" placeholder="رمز المدير" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white font-medium mb-4" />
+                    <button id="adminLoginButton" class="w-full bg-primary-indigo hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors">
+                        تسجيل الدخول
+                    </button>
+                </div>
 
-      tabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          tabs.forEach((t) => t.classList.remove("active"));
-          games.forEach((g) => g.classList.remove("active"));
+                <!-- محتوى وضع المدير -->
+                <div id="adminContent" class="hidden">
+                    <div id="adminSettingsContainer" class="mb-4">
+                        <h4 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">إعدادات النظام العامة</h4>
+                        <div class="flex items-center space-x-4 space-x-reverse mb-4">
+                            <div class="flex-1">
+                                <label for="adminMaxBreaks" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريكات لكل شخص:</label>
+                                <input type="number" id="adminMaxBreaks" min="1" max="5" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-medium" />
+                            </div>
+                            <div class="flex-1">
+                                <label for="adminBreakDuration" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مدة البريك (دقائق):</label>
+                                <select id="adminBreakDuration" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-medium">
+                                    <option value="15">15 دقيقة</option>
+                                    <option value="20">20 دقيقة</option>
+                                    <option value="30">30 دقيقة</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="saveAdminSettingsButton" class="w-full bg-secondary-green hover:bg-green-600 text-white font-bold py-2 rounded-lg transition-colors mb-4">
+                            حفظ الإعدادات
+                        </button>
+                    </div>
 
-          tab.classList.add("active");
-          const target = document.getElementById(tab.dataset.target);
-          target.classList.add("active");
+                    <h4 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">إدارة الحجوزات النشطة</h4>
+                    <p class="text-sm font-semibold text-red-600 dark:text-red-400 mb-4">⚠️ تنبيه: الحذف هنا يؤثر على حجوزات اليوم الحالي فقط.</p>
+                    <div id="adminBookingsList" class="max-h-80 overflow-y-auto no-scrollbar border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                        <!-- قائمة الحجوزات الحالية تظهر هنا -->
+                        <p id="noAdminBookings" class="text-center text-gray-500 dark:text-gray-400">لا توجد حجوزات نشطة حالياً.</p>
+                    </div>
+                    <button id="adminLogoutButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors mt-4">
+                        تسجيل الخروج
+                    </button>
+                </div>
 
-          // إعادة تشغيل اللعبة المختارة تلقائياً
-          switch (tab.dataset.target) {
-            case "xoGame":
-              resetXO();
-              break;
-            case "memoryGame":
-              resetMemory();
-              break;
-            case "catchGameContainer":
-              resetCatch();
-              break;
-            case "dinoGameContainer":
-              resetDino();
-              break;
-          }
-        });
-      });
+            </div>
+        </div> <!-- End of main content container -->
+    </div>
 
-      // ******************
-      // لعبة XO ذكي
-      // ******************
-      const xoBoard = document.getElementById("xoBoard");
-      const xoStatus = document.getElementById("xoStatus");
-      const xoResetBtn = document.getElementById("xoResetBtn");
+    <!-- ========================================================================= -->
+    <!--                  Firebase & App Logic Setup (الوحدة النمطية)                -->
+    <!-- ========================================================================= -->
+    <script type="module">
+        // استيراد وظائف Firebase المطلوبة
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, query, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-      let xoBoardState = Array(9).fill(null);
-      let xoTurn = "X"; // المستخدم يبدأ بـ X
-      let xoGameOver = false;
+        // =========================================================================
+        //                            تهيئة الثوابت والمتغيرات
+        // =========================================================================
 
-      function checkXOWinner(board) {
-        const lines = [
-          [0, 1, 2],
-          [3, 4, 5],
-          [6, 7, 8],
-          [0, 3, 6],
-          [1, 4, 7],
-          [2, 5, 8],
-          [0, 4, 8],
-          [2, 4, 6],
-        ];
-        for (let line of lines) {
-          const [a, b, c] = line;
-          if (
-            board[a] &&
-            board[a] === board[b] &&
-            board[a] === board[c]
-          ) {
-            return board[a];
-          }
-        }
-        if (board.every((cell) => cell !== null)) return "tie";
-        return null;
-      }
+        // تفعيل وضع التصحيح (Debug) لـ Firestore
+        setLogLevel('debug');
 
-      function xoMakeMove(index, player) {
-        if (xoBoardState[index] || xoGameOver) return false;
-        xoBoardState[index] = player;
-        renderXO();
-        return true;
-      }
+        // التأكد من أن المتغيرات العامة متوفرة أو استخدام قيم افتراضية
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        const ADMIN_CODE = "1234"; // رمز المدير الثابت
+        const MAX_BREAKS_FIELD = 'maxBreaks';
+        const BREAK_DURATION_FIELD = 'breakDuration';
+        
+        // تهيئة Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-      function xoComputerMove() {
-        // استخدام Minimax لخوارزمية ذكية
-        function minimax(board, player) {
-          const winner = checkXOWinner(board);
-          if (winner === "X") return { score: -10 };
-          if (winner === "O") return { score: 10 };
-          if (winner === "tie") return { score: 0 };
+        // متغيرات الحالة
+        let currentUserId = null;
+        let isAdminMode = false;
+        let currentBookings = [];
+        let systemSettings = {};
 
-          let moves = [];
+        // عناوين مسارات Firestore
+        const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'global');
+        const bookingsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
 
-          for (let i = 0; i < board.length; i++) {
-            if (!board[i]) {
-              let newBoard = board.slice();
-              newBoard[i] = player;
-              let result = minimax(newBoard, player === "O" ? "X" : "O");
-              moves.push({ index: i, score: result.score });
+        // العناصر
+        const elements = {
+            userIdDisplay: document.getElementById('userIdDisplay'),
+            departmentSelect: document.getElementById('departmentSelect'),
+            maxBreaksInput: document.getElementById('maxBreaksInput'),
+            breakDurationInput: document.getElementById('breakDurationInput'),
+            bookingsGrid: document.getElementById('bookingsGrid'),
+            adminButton: document.getElementById('adminButton'),
+            adminModal: document.getElementById('adminModal'),
+            closeAdminModal: document.getElementById('closeAdminModal'),
+            adminLoginForm: document.getElementById('adminLoginForm'),
+            adminCode: document.getElementById('adminCode'),
+            adminLoginButton: document.getElementById('adminLoginButton'),
+            adminContent: document.getElementById('adminContent'),
+            adminMaxBreaks: document.getElementById('adminMaxBreaks'),
+            adminBreakDuration: document.getElementById('adminBreakDuration'),
+            saveAdminSettingsButton: document.getElementById('saveAdminSettingsButton'),
+            adminBookingsList: document.getElementById('adminBookingsList'),
+            adminLogoutButton: document.getElementById('adminLogoutButton'),
+            noAdminBookings: document.getElementById('noAdminBookings'),
+        };
+
+        // =========================================================================
+        //                            الدوال المساعدة
+        // =========================================================================
+
+        /** عرض رسالة تنبيه للمستخدم */
+        function showMessage(message, type = 'info') {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            const messageIcon = document.getElementById('messageIcon');
+
+            messageText.textContent = message;
+
+            messageBox.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-2xl z-50 transition-opacity duration-300 flex items-center min-w-[300px] text-center';
+            messageIcon.innerHTML = '';
+
+            let bgColor, textColor, iconHtml;
+
+            switch (type) {
+                case 'success':
+                    bgColor = 'bg-secondary-green';
+                    textColor = 'text-white';
+                    iconHtml = '<i data-feather="check-circle" class="w-6 h-6 ml-2"></i>';
+                    break;
+                case 'error':
+                    bgColor = 'bg-danger-red';
+                    textColor = 'text-white';
+                    iconHtml = '<i data-feather="alert-octagon" class="w-6 h-6 ml-2"></i>';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-gold-star';
+                    textColor = 'text-gray-800';
+                    iconHtml = '<i data-feather="alert-triangle" class="w-6 h-6 ml-2"></i>';
+                    break;
+                case 'info':
+                default:
+                    bgColor = 'bg-light-blue';
+                    textColor = 'text-white';
+                    iconHtml = '<i data-feather="info" class="w-6 h-6 ml-2"></i>';
+                    break;
             }
-          }
 
-          if (player === "O") {
-            // Maximize
-            let maxMove = moves.reduce(
-              (max, move) => (move.score > max.score ? move : max),
-              moves[0]
-            );
-            return maxMove;
-          } else {
-            // Minimize
-            let minMove = moves.reduce(
-              (min, move) => (move.score < min.score ? move : min),
-              moves[0]
-            );
-            return minMove;
-          }
+            messageBox.classList.add(bgColor, textColor);
+            messageIcon.innerHTML = iconHtml;
+            feather.replace(); // تحديث أيقونات Feather
+
+            messageBox.classList.remove('opacity-0', 'hidden');
+            messageBox.classList.add('opacity-100');
+
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-100');
+                messageBox.classList.add('opacity-0');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 300);
+            }, 4000);
         }
 
-        if (xoGameOver) return;
-
-        const move = minimax(xoBoardState, "O");
-        if (move && move.index !== undefined) {
-          xoMakeMove(move.index, "O");
-          xoTurn = "X";
-          xoStatus.textContent = "دورك: X";
-          checkXOGameStatus();
-        }
-      }
-
-      function checkXOGameStatus() {
-        const winner = checkXOWinner(xoBoardState);
-        if (winner === "X") {
-          xoStatus.textContent = "تهانينا! فزت! 🎉";
-          xoGameOver = true;
-        } else if (winner === "O") {
-          xoStatus.textContent = "خسرت! الكمبيوتر فاز.";
-          xoGameOver = true;
-        } else if (winner === "tie") {
-          xoStatus.textContent = "تعادل!";
-          xoGameOver = true;
-        }
-      }
-
-      function renderXO() {
-        xoBoard.innerHTML = "";
-        xoBoardState.forEach((cell, idx) => {
-          const div = document.createElement("div");
-          div.classList.add("xoCell");
-          div.textContent = cell ? cell : "";
-          div.addEventListener("click", () => {
-            if (xoGameOver || xoTurn !== "X" || xoBoardState[idx]) return;
-            xoMakeMove(idx, "X");
-            xoTurn = "O";
-            xoStatus.textContent = "دور الكمبيوتر...";
-            checkXOGameStatus();
-            if (!xoGameOver) {
-              setTimeout(() => {
-                xoComputerMove();
-              }, 500);
+        /** نسخ معرف المستخدم عند النقر */
+        function copyUserId() {
+            if (currentUserId) {
+                navigator.clipboard.writeText(currentUserId)
+                    .then(() => showMessage("تم نسخ معرّف المستخدم بنجاح!", 'success'))
+                    .catch(() => showMessage("فشل في النسخ. يرجى النسخ يدوياً.", 'warning'));
             }
-          });
-          xoBoard.appendChild(div);
-        });
-      }
-
-      function resetXO() {
-        xoBoardState = Array(9).fill(null);
-        xoTurn = "X";
-        xoGameOver = false;
-        xoStatus.textContent = "دورك: X";
-        renderXO();
-      }
-
-      xoResetBtn.addEventListener("click", resetXO);
-      resetXO();
-
-      // ******************
-      // لعبة الذاكرة
-      // ******************
-      const memoryBoard = document.getElementById("memoryBoard");
-      const memoryStatus = document.getElementById("memoryStatus");
-      const memoryResetBtn = document.getElementById("memoryResetBtn");
-
-      const memorySymbols = ["🍎", "🍌", "🍇", "🍓", "🍒", "🥝"];
-      let memoryCards = [];
-      let flippedCards = [];
-      let matchedCards = [];
-      let memoryBusy = false;
-
-      function shuffle(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-          let j = Math.floor(Math.random() * (i + 1));
-          [array[i], array[j]] = [array[j], array[i]];
         }
-      }
+        window.copyUserId = copyUserId; // لجعلها متاحة لـ onclick في HTML
 
-      function createMemoryBoard() {
-        memoryCards = [...memorySymbols, ...memorySymbols];
-        shuffle(memoryCards);
-        memoryBoard.innerHTML = "";
-        memoryCards.forEach((symbol, idx) => {
-          const card = document.createElement("div");
-          card.classList.add("memoryCard");
-          card.dataset.symbol = symbol;
-          card.textContent = "";
-          card.addEventListener("click", () => {
-            if (memoryBusy) return;
-            if (flippedCards.includes(card) || matchedCards.includes(card)) return;
-            flipCard(card);
-          });
-          memoryBoard.appendChild(card);
-        });
-      }
-
-      function flipCard(card) {
-        card.textContent = card.dataset.symbol;
-        card.classList.add("flipped");
-        flippedCards.push(card);
-        if (flippedCards.length === 2) {
-          memoryBusy = true;
-          setTimeout(() => {
-            checkMemoryMatch();
-          }, 1000);
+        /** تحويل كائن التاريخ إلى سلسلة زمنية (HH:MM) */
+        function formatTime(date) {
+            return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
         }
-      }
-
-      function checkMemoryMatch() {
-        const [c1, c2] = flippedCards;
-        if (c1.dataset.symbol === c2.dataset.symbol) {
-          matchedCards.push(c1, c2);
-          memoryStatus.textContent = `مبروك! وجدت زوجًا من ${c1.dataset.symbol}`;
-          if (matchedCards.length === memoryCards.length) {
-            memoryStatus.textContent = "لقد أكملت لعبة الذاكرة!";
-          }
-        } else {
-          c1.textContent = "";
-          c2.textContent = "";
-          c1.classList.remove("flipped");
-          c2.classList.remove("flipped");
-          memoryStatus.textContent = "حاول مرة أخرى.";
-        }
-        flippedCards = [];
-        memoryBusy = false;
-      }
-
-      function resetMemory() {
-        flippedCards = [];
-        matchedCards = [];
-        memoryBusy = false;
-        memoryStatus.textContent = "";
-        createMemoryBoard();
-      }
-
-      memoryResetBtn.addEventListener("click", resetMemory);
-      resetMemory();
-
-      // ******************
-      // لعبة اضغط المربع
-      // ******************
-      const catchGame = document.getElementById("catchGame");
-      const catchBox = document.getElementById("catchBox");
-      const catchScoreEl = document.getElementById("catchScore");
-      const catchResetBtn = document.getElementById("catchResetBtn");
-
-      let catchScore = 0;
-
-      function randomPosition() {
-        const maxX = catchGame.clientWidth - catchBox.clientWidth;
-        const maxY = catchGame.clientHeight - catchBox.clientHeight;
-        const x = Math.floor(Math.random() * maxX);
-        const y = Math.floor(Math.random() * maxY);
-        return { x, y };
-      }
-
-      function moveCatchBox() {
-        const pos = randomPosition();
-        catchBox.style.left = pos.x + "px";
-        catchBox.style.top = pos.y + "px";
-      }
-
-      catchBox.addEventListener("click", () => {
-        if (catchScore >= 30) return; // حد نقاط
-        catchScore++;
-        catchScoreEl.textContent = `النقاط: ${catchScore}`;
-        moveCatchBox();
-      });
-
-      function resetCatch() {
-        catchScore = 0;
-        catchScoreEl.textContent = "النقاط: 0";
-        moveCatchBox();
-      }
-
-      catchResetBtn.addEventListener("click", resetCatch);
-      resetCatch();
-
-      // ******************
-      // لعبة الديناصور مع مراحل
-      // ******************
-
-      const canvas = document.getElementById("dinoCanvas");
-      const ctx = canvas.getContext("2d");
-
-      const dino = {
-        x: 50,
-        y: 0,
-        width: 40,
-        height: 40,
-        yVelocity: 0,
-        gravity: 0.7,
-        jumpStrength: -14,
-        isJumping: false,
-      };
-
-      let obstacles = [];
-      let dinoGameOver = false;
-      let dinoScore = 0;
-      let dinoSpeed = 6;
-      let dinoFrameCount = 0;
-      let dinoLevel = 1;
-
-      const levelBackgrounds = [
-        "#1a1a1a",
-        "#2a2a72",
-        "#3a6ea5",
-        "#5a9bd4",
-        "#7ab8ff",
-      ];
-
-      function resetDino() {
-        dino.y = canvas.height - dino.height - 10;
-        dino.yVelocity = 0;
-        dino.isJumping = false;
-        obstacles = [];
-        dinoGameOver = false;
-        dinoScore = 0;
-        dinoSpeed = 6;
-        dinoFrameCount = 0;
-        dinoLevel = 1;
-        canvas.style.backgroundColor = levelBackgrounds[0];
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        canvas.focus();
-        animateDino();
-      }
-
-      function drawDino() {
-        ctx.fillStyle = "#ff9800";
-        ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
-      }
-
-      function drawObstacle(obs) {
-        ctx.fillStyle = "#ff5722";
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-      }
-
-      function updateBackground() {
-        const bgColor =
-          levelBackgrounds[Math.min(dinoLevel - 1, levelBackgrounds.length - 1)];
-        canvas.style.backgroundColor = bgColor;
-      }
-
-      function gameOverDino() {
-        dinoGameOver = true;
-        ctx.font = "30px Tajawal, sans-serif";
-        ctx.fillStyle = "#eee";
-        ctx.textAlign = "center";
-        ctx.fillText("انتهت اللعبة! اضغط إعادة اللعب.", canvas.width / 2, canvas.height / 2);
-      }
-
-      function animateDino() {
-        if (dinoGameOver) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        updateBackground();
-
-        // Dino physics
-        dino.yVelocity += dino.gravity;
-        dino.y += dino.yVelocity;
-
-        if (dino.y > canvas.height - dino.height - 10) {
-          dino.y = canvas.height - dino.height - 10;
-          dino.yVelocity = 0;
-          dino.isJumping = false;
+        
+        /** تحويل التاريخ إلى مفتاح يومي (YYYY-MM-DD) */
+        function getTodayKey() {
+            return new Date().toISOString().split('T')[0];
         }
 
-        drawDino();
+        /** بناء قائمة الفترات الزمنية المتاحة (8:00 إلى 16:00) */
+        function generateTimeSlots(durationMinutes) {
+            const slots = [];
+            const startTime = new Date();
+            startTime.setHours(8, 0, 0, 0); // 8:00 AM
 
-        // Handle obstacles
-        if (dinoFrameCount % 90 === 0) {
-          // كل 90 إطار يظهر عائق جديد
-          let obsHeight = 30 + Math.random() * 30;
-          obstacles.push({
-            x: canvas.width,
-            y: canvas.height - obsHeight - 10,
-            width: 20,
-            height: obsHeight,
-          });
-        }
+            const endTime = new Date();
+            endTime.setHours(16, 0, 0, 0); // 4:00 PM (Exclusive)
 
-        obstacles.forEach((obs, idx) => {
-          obs.x -= dinoSpeed;
-          drawObstacle(obs);
+            let currentTime = startTime;
 
-          // تصادم
-          if (
-            dino.x < obs.x + obs.width &&
-            dino.x + dino.width > obs.x &&
-            dino.y < obs.y + obs.height &&
-            dino.y + dino.height > obs.y
-          ) {
-            gameOverDino();
-          }
+            while (currentTime.getTime() < endTime.getTime()) {
+                const start = new Date(currentTime);
+                currentTime.setMinutes(currentTime.getMinutes() + durationMinutes);
+                const end = new Date(currentTime);
 
-          // إزالة العوائق بعد خروجها من الشاشة
-          if (obs.x + obs.width < 0) {
-            obstacles.splice(idx, 1);
-            dinoScore++;
-            if (dinoScore % 10 === 0) {
-              dinoLevel++;
-              dinoSpeed += 1;
-              updateBackground();
+                if (end.getTime() <= endTime.getTime()) {
+                    slots.push({
+                        id: `${formatTime(start)}-${formatTime(end)}`,
+                        start: formatTime(start),
+                        end: formatTime(end),
+                    });
+                }
             }
-          }
-        });
-
-        // عرض النقاط والمستوى
-        ctx.font = "18px Tajawal, sans-serif";
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "left";
-        ctx.fillText(`النقاط: ${dinoScore}`, 10, 25);
-        ctx.fillText(`المستوى: ${dinoLevel}`, 10, 50);
-
-        dinoFrameCount++;
-        requestAnimationFrame(animateDino);
-      }
-
-      // القفز
-      canvas.addEventListener("keydown", (e) => {
-        if ((e.code === "Space" || e.code === "ArrowUp") && !dino.isJumping && !dinoGameOver) {
-          dino.yVelocity = dino.jumpStrength;
-          dino.isJumping = true;
+            return slots;
         }
-      });
 
-      document.getElementById("dinoResetBtn").addEventListener("click", resetDino);
+        // =========================================================================
+        //                            وظائف المصادقة (Auth)
+        // =========================================================================
 
-      resetDino();
+        /** الوظيفة الرئيسية لتسجيل الدخول وتحديد معرف المستخدم */
+        async function initAuthAndApp() {
+            try {
+                // محاولة تسجيل الدخول باستخدام الرمز المخصص (Custom Token)
+                if (initialAuthToken) {
+                    console.log("Attempting sign in with Custom Token...");
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Sign in with Custom Token successful.");
+                } else {
+                    console.warn("Custom Auth Token is not available. Proceeding to check for existing session/local ID.");
+                }
+            } catch (error) {
+                // *** FIX: تجنب signInAnonymously الذي يسبب خطأ App Check ***
+                console.error("Firebase Sign-in Failed (Custom Token Error, bypassing Anonymous Sign-in):", error.message);
+            }
+
+            // مراقبة حالة المصادقة وتحديد معرف المستخدم النهائي
+            onAuthStateChanged(auth, (user) => {
+                let userId = null;
+                
+                if (user) {
+                    // 1. المستخدم مصادق عليه عبر الرمز المخصص (أو أي طريقة أخرى)
+                    userId = user.uid;
+                    console.log(`User Signed In. UID: ${userId}`);
+                } else {
+                    // 2. المستخدم غير مصادق عليه: استخدام معرف فريد محلي
+                    userId = localStorage.getItem('localUserId');
+                    if (!userId) {
+                        userId = crypto.randomUUID();
+                        localStorage.setItem('localUserId', userId);
+                    }
+                    console.log(`User Not Signed In. Using Local ID: ${userId}`);
+                }
+
+                currentUserId = userId;
+                elements.userIdDisplay.textContent = currentUserId;
+
+                // بدء تهيئة التطبيق بمنطقية بعد تحديد معرف المستخدم
+                initApp(currentUserId);
+            });
+        }
+
+        // =========================================================================
+        //                      وظائف التطبيق الرئيسية (App Logic)
+        // =========================================================================
+
+        /** تهيئة التطبيق بعد المصادقة */
+        function initApp(userId) {
+            console.log("Application Initialized for User:", userId);
+            
+            loadSystemSettings(); // تحميل الإعدادات أولاً
+            setupBookingsListener(); // ثم الاستماع للحجوزات
+            setupEventListeners(); // إعداد المستمعين لواجهة المستخدم
+        }
+
+        /** تحميل إعدادات النظام وتعيين المستمع */
+        function loadSystemSettings() {
+            onSnapshot(settingsDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    systemSettings = docSnap.data();
+                    console.log("System Settings loaded:", systemSettings);
+                } else {
+                    // إعدادات افتراضية في حالة عدم وجود مستند
+                    systemSettings = {
+                        [MAX_BREAKS_FIELD]: 1,
+                        [BREAK_DURATION_FIELD]: 15,
+                        adminLoggedIn: false
+                    };
+                    // إنشاء المستند الافتراضي إذا لم يكن موجوداً
+                    setDoc(settingsDocRef, systemSettings, { merge: true }).catch(e => console.error("Error creating default settings:", e));
+                }
+                applySettingsToUI();
+                renderTimeSlots(); // إعادة رسم الأوقات بعد تحديث الإعدادات
+            }, (error) => {
+                console.error("Error fetching settings:", error);
+                showMessage("خطأ في تحميل إعدادات النظام.", 'error');
+            });
+        }
+        
+        /** تطبيق الإعدادات المحملة على واجهة المستخدم */
+        function applySettingsToUI() {
+            elements.maxBreaksInput.value = systemSettings[MAX_BREAKS_FIELD] || 1;
+            elements.breakDurationInput.value = systemSettings[BREAK_DURATION_FIELD] || 15;
+
+            // تحديث وضع المدير في حال خروج المدير من مكان آخر
+            if (isAdminMode && !systemSettings.adminLoggedIn) {
+                logoutAdmin();
+            }
+        }
+
+        /** إعداد مستمع الحجوزات في الوقت الفعلي */
+        function setupBookingsListener() {
+            // فلترة الحجوزات لليوم الحالي فقط
+            const todayKey = getTodayKey();
+            const q = query(bookingsCollectionRef, where("dateKey", "==", todayKey));
+
+            onSnapshot(q, (snapshot) => {
+                currentBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Current Bookings updated:", currentBookings);
+                renderTimeSlots();
+                if (isAdminMode) {
+                    renderAdminBookings();
+                }
+            }, (error) => {
+                console.error("Error fetching bookings:", error);
+                showMessage("خطأ في تحميل الحجوزات.", 'error');
+            });
+        }
+
+        /** رسم مربعات الأوقات وتحديث حالتها */
+        function renderTimeSlots() {
+            const duration = parseInt(elements.breakDurationInput.value || 15);
+            const slots = generateTimeSlots(duration);
+            elements.bookingsGrid.innerHTML = '';
+            
+            const selectedDepartment = elements.departmentSelect.value;
+            const maxBreaks = parseInt(elements.maxBreaksInput.value || 1);
+
+            slots.forEach(slot => {
+                // فحص الحجوزات لهذا القسم ولهذا الوقت
+                const booking = currentBookings.find(b => b.timeSlotId === slot.id && b.department === selectedDepartment);
+
+                let status = 'available';
+                let buttonText = 'حجز';
+                let bgColor = 'bg-secondary-green hover:bg-green-600';
+                let textColor = 'text-white';
+                let userBreakCount = currentBookings.filter(b => b.userId === currentUserId && b.department === selectedDepartment).length;
+                let isBookedByUser = false;
+
+                if (booking) {
+                    if (booking.userId === currentUserId) {
+                        status = 'booked-by-user';
+                        buttonText = 'إلغاء الحجز';
+                        bgColor = 'bg-danger-red hover:bg-red-600';
+                        textColor = 'text-white';
+                        isBookedByUser = true;
+                    } else {
+                        status = 'booked-by-other';
+                        buttonText = 'محجوز';
+                        bgColor = 'bg-gray-400 dark:bg-gray-600';
+                        textColor = 'text-gray-900 dark:text-gray-100';
+                    }
+                } else if (userBreakCount >= maxBreaks) {
+                    status = 'limit-reached';
+                    buttonText = 'تم تجاوز الحد';
+                    bgColor = 'bg-gray-200 dark:bg-gray-700';
+                    textColor = 'text-gray-500 dark:text-gray-400';
+                }
+
+                // تحديد ما إذا كان الزر معطلاً
+                const isDisabled = (status === 'booked-by-other' || status === 'limit-reached') && !isBookedByUser;
+                const cursorStyle = isDisabled ? 'cursor-not-allowed' : 'cursor-pointer';
+
+                const slotHTML = `
+                    <div class="p-3 border rounded-lg shadow-sm transition-all duration-200 ${booking ? (isBookedByUser ? 'border-danger-red dark:border-red-500' : 'border-gray-300 dark:border-gray-600') : 'border-secondary-green dark:border-green-500'} dark:bg-gray-700">
+                        <p class="text-sm font-bold text-gray-900 dark:text-white">${slot.start} - ${slot.end}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                            ${booking ? (isBookedByUser ? 'حجزك' : `محجوز بواسطة: ${booking.userId.substring(0, 8)}...`) : 'متاح'}
+                        </p>
+                        <button 
+                            class="w-full text-xs font-semibold py-2 rounded-md transition-colors ${bgColor} ${textColor} ${isDisabled ? 'opacity-50' : ''} ${cursorStyle}"
+                            data-slot-id="${slot.id}"
+                            data-booking-id="${booking ? booking.id : ''}"
+                            data-is-booked-by-user="${isBookedByUser}"
+                            ${isDisabled ? 'disabled' : ''}
+                        >
+                            ${buttonText}
+                        </button>
+                    </div>
+                `;
+                elements.bookingsGrid.insertAdjacentHTML('beforeend', slotHTML);
+            });
+
+            // إضافة مستمعي الأحداث لمربعات الحجز الجديدة
+            elements.bookingsGrid.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', () => handleBooking(button));
+            });
+        }
+
+        /** معالجة حجز أو إلغاء حجز فترة زمنية */
+        async function handleBooking(button) {
+            const slotId = button.dataset.slotId;
+            const bookingId = button.dataset.bookingId;
+            const isBookedByUser = button.dataset.isBookedByUser === 'true';
+            const department = elements.departmentSelect.value;
+            
+            // تحقق من وجود معرف المستخدم
+            if (!currentUserId) {
+                showMessage("لا يمكن المتابعة. فشل في تحديد معرف المستخدم.", 'error');
+                return;
+            }
+
+            if (isBookedByUser) {
+                // إلغاء الحجز
+                try {
+                    await setDoc(doc(bookingsCollectionRef, bookingId), {
+                        deleted: true,
+                        deletedAt: new Date(),
+                        deletedBy: currentUserId
+                    }, { merge: true });
+                    showMessage("تم إلغاء حجز البريك بنجاح.", 'success');
+                } catch (e) {
+                    console.error("Error cancelling booking:", e);
+                    showMessage("فشل في إلغاء الحجز.", 'error');
+                }
+            } else {
+                // حجز جديد
+                try {
+                    // تحقق مزدوج من الحد الأقصى للحجوزات
+                    const maxBreaks = parseInt(elements.maxBreaksInput.value || 1);
+                    const userBreakCount = currentBookings.filter(b => b.userId === currentUserId && b.department === department && !b.deleted).length;
+
+                    if (userBreakCount >= maxBreaks) {
+                        showMessage(`لقد وصلت إلى الحد الأقصى للحجوزات (${maxBreaks}) في هذا القسم.`, 'warning');
+                        return;
+                    }
+
+                    // تحقق من أن الفترة غير محجوزة بالفعل (للحد من التعارضات المتزامنة)
+                    const existingBooking = currentBookings.find(b => b.timeSlotId === slotId && b.department === department && !b.deleted);
+                    if (existingBooking) {
+                        showMessage("هذه الفترة محجوزة للتو من قبل شخص آخر. يرجى التحديث والمحاولة مرة أخرى.", 'warning');
+                        return;
+                    }
+
+                    const newBookingData = {
+                        timeSlotId: slotId,
+                        department: department,
+                        userId: currentUserId,
+                        dateKey: getTodayKey(),
+                        createdAt: new Date(),
+                        deleted: false
+                    };
+
+                    // Firestore's addDoc will automatically generate a unique ID
+                    await setDoc(doc(bookingsCollectionRef, `${slotId}-${department}-${getTodayKey()}`), newBookingData);
+                    showMessage("تم حجز البريك بنجاح!", 'success');
+
+                } catch (e) {
+                    console.error("Error setting booking:", e);
+                    showMessage("فشل في حجز البريك. يرجى المحاولة مرة أخرى.", 'error');
+                }
+            }
+        }
+
+        /** عرض قائمة الحجوزات لوضع المدير */
+        function renderAdminBookings() {
+            elements.adminBookingsList.innerHTML = '';
+            
+            const activeBookings = currentBookings.filter(b => !b.deleted).sort((a, b) => a.timeSlotId.localeCompare(b.timeSlotId));
+
+            if (activeBookings.length === 0) {
+                elements.noAdminBookings.classList.remove('hidden');
+            } else {
+                elements.noAdminBookings.classList.add('hidden');
+                activeBookings.forEach(booking => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-lg';
+                    listItem.innerHTML = `
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">${booking.timeSlotId}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">القسم: ${booking.department} | المستخدم: ${booking.userId.substring(0, 12)}...</p>
+                        </div>
+                        <button class="admin-delete-booking bg-danger-red hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-md ml-2 transition-colors" data-id="${booking.id}">
+                            حذف
+                        </button>
+                    `;
+                    elements.adminBookingsList.appendChild(listItem);
+                });
+
+                elements.adminBookingsList.querySelectorAll('.admin-delete-booking').forEach(button => {
+                    button.addEventListener('click', (e) => handleAdminDeleteBooking(e.currentTarget.dataset.id));
+                });
+            }
+        }
+
+        /** معالجة حذف حجز في وضع المدير */
+        async function handleAdminDeleteBooking(bookingId) {
+            try {
+                await setDoc(doc(bookingsCollectionRef, bookingId), {
+                    deleted: true,
+                    deletedAt: new Date(),
+                    deletedBy: currentUserId,
+                    adminDeleted: true
+                }, { merge: true });
+                showMessage("تم حذف الحجز بنجاح (وضع المدير).", 'warning');
+            } catch (e) {
+                console.error("Error deleting booking (Admin):", e);
+                showMessage("فشل في حذف الحجز.", 'error');
+            }
+        }
+        
+        /** حفظ إعدادات المدير */
+        async function saveAdminSettings() {
+            const newMaxBreaks = parseInt(elements.adminMaxBreaks.value);
+            const newDuration = parseInt(elements.adminBreakDuration.value);
+            
+            if (isNaN(newMaxBreaks) || isNaN(newDuration) || newMaxBreaks < 1) {
+                showMessage("قيمة الإعدادات غير صالحة.", 'error');
+                return;
+            }
+
+            try {
+                await updateDoc(settingsDocRef, {
+                    [MAX_BREAKS_FIELD]: newMaxBreaks,
+                    [BREAK_DURATION_FIELD]: newDuration
+                });
+                showMessage("تم حفظ الإعدادات بنجاح.", 'success');
+            } catch (e) {
+                console.error("Error saving admin settings:", e);
+                showMessage("فشل في حفظ الإعدادات.", 'error');
+            }
+        }
+
+        /** تسجيل دخول المدير */
+        async function loginAdmin() {
+            const code = elements.adminCode.value;
+            if (code === ADMIN_CODE) {
+                try {
+                    // تحديث حالة المدير في Firestore لمنع التزامن المتعدد
+                    await updateDoc(settingsDocRef, { adminLoggedIn: true, adminUserId: currentUserId, adminLoginTime: new Date() });
+                    isAdminMode = true;
+                    elements.adminLoginForm.classList.add('hidden');
+                    elements.adminContent.classList.remove('hidden');
+                    
+                    // تحديث قيم الإدخال في وضع المدير
+                    elements.adminMaxBreaks.value = systemSettings[MAX_BREAKS_FIELD];
+                    elements.adminBreakDuration.value = systemSettings[BREAK_DURATION_FIELD];
+                    
+                    renderAdminBookings();
+                    showMessage("تم تسجيل الدخول كمدير بنجاح!", 'success');
+                } catch (e) {
+                    console.error("Error setting admin state:", e);
+                    showMessage("فشل في تسجيل الدخول كمدير. يرجى المحاولة مرة أخرى.", 'error');
+                }
+
+            } else {
+                showMessage("رمز المدير غير صحيح.", 'error');
+            }
+        }
+
+        /** تسجيل خروج المدير */
+        async function logoutAdmin() {
+            try {
+                // تحديث حالة المدير في Firestore
+                await updateDoc(settingsDocRef, { adminLoggedIn: false, adminUserId: null });
+                isAdminMode = false;
+                elements.adminContent.classList.add('hidden');
+                elements.adminLoginForm.classList.remove('hidden');
+                elements.adminCode.value = ''; // مسح الرمز
+                showMessage("تم تسجيل الخروج من وضع المدير.", 'info');
+            } catch (e) {
+                console.error("Error logging out admin:", e);
+                // يمكن السماح بالخروج محلياً حتى إذا فشل تحديث Firestore
+                isAdminMode = false;
+                elements.adminContent.classList.add('hidden');
+                elements.adminLoginForm.classList.remove('hidden');
+                elements.adminCode.value = '';
+                showMessage("تم تسجيل الخروج محلياً، حدث خطأ في تحديث قاعدة البيانات.", 'warning');
+            }
+        }
+
+
+        /** إعداد مستمعي أحداث الواجهة */
+        function setupEventListeners() {
+            elements.departmentSelect.addEventListener('change', renderTimeSlots);
+            elements.breakDurationInput.addEventListener('change', renderTimeSlots);
+            elements.maxBreaksInput.addEventListener('change', renderTimeSlots);
+            
+            // فتح نافذة المدير
+            elements.adminButton.addEventListener('click', () => {
+                // منع الفتح إذا كان هناك مدير آخر مسجل الدخول
+                if (systemSettings.adminLoggedIn && systemSettings.adminUserId !== currentUserId) {
+                    showMessage("مدير آخر يقوم بتعديل الإعدادات حالياً.", 'warning');
+                    return;
+                }
+                elements.adminModal.classList.remove('hidden');
+                feather.replace(); // تحديث الأيقونات في النافذة
+            });
+
+            // إغلاق نافذة المدير
+            elements.closeAdminModal.addEventListener('click', () => {
+                elements.adminModal.classList.add('hidden');
+            });
+            
+            // معالجة تسجيل الدخول للمدير
+            elements.adminLoginButton.addEventListener('click', loginAdmin);
+            
+            // معالجة تسجيل الخروج للمدير
+            elements.adminLogoutButton.addEventListener('click', logoutAdmin);
+            
+            // حفظ إعدادات المدير
+            elements.saveAdminSettingsButton.addEventListener('click', saveAdminSettings);
+        }
+
+        // بدء عملية المصادقة والتطبيق
+        document.addEventListener('DOMContentLoaded', () => {
+            initAuthAndApp();
+            feather.replace(); // استبدال الأيقونات عند تحميل DOM
+        });
+        
     </script>
-  </body>
+</body>
 </html>
