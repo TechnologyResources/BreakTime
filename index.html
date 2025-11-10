@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Break Time Buddy - جدول حجز البريكات للأقسام</title>
     
-    <!-- تحميل Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- تحميل Feather Icons -->
-    <script src="https://unpkg.com/feather-icons"></script>
     
     <script>
         // =========================================================================
@@ -26,14 +23,13 @@
                         'danger-red': '#ef4444',      // لون الخطر: أحمر لعمليات الحذف أو الأخطاء
                         'gold-star': '#facc15',       // لون الذهب: للتنبيهات والتحذيرات
                         'light-blue': '#3b82f6',      // لون أزرق فاتح: للمعلومات والحالة
-                        'gray-dark-900': '#1f2937'    // لون داكن إضافي للخلفيات
                     }
                 }
             }
         }
     </script>
 <style>
-    /* تخصيص شريط التمرير لوضع المدير */
+    /* إخفاء شريط التمرير ولكن السماح بالتمرير (لتحسين تجربة المستخدم) */
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
@@ -41,714 +37,986 @@
         -ms-overflow-style: none;  /* IE and Edge */
         scrollbar-width: none;  /* Firefox */
     }
-</style>
-</head>
-<body class="bg-gray-50 dark:bg-gray-dark-900 transition-colors duration-300 min-h-screen p-4">
 
-    <!-- رسالة التنبيه (Message Box) -->
-    <div id="messageBox" class="fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-2xl z-50 transition-opacity duration-300 flex items-center hidden opacity-0 min-w-[300px] text-center" role="alert">
-        <div id="messageIcon" class="flex-shrink-0"></div>
-        <span id="messageText" class="font-medium text-sm"></span>
+    /* تأثيرات CSS إضافية للحالة الداكنة والتخطيط العام */
+    body {
+        font-family: 'Inter', sans-serif; /* استخدام خط Inter */
+        transition: background-color 0.3s, color 0.3s;
+    }
+    .card {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    }
+    .dark .card {
+        box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.05), 0 4px 6px -4px rgba(255, 255, 255, 0.05);
+    }
+
+    /* تخصيص إطار التنبيه (Modal) */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.75);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 50;
+    }
+</style>
+
+<!-- ========================================================================= -->
+<!--             إعدادات وتهيئة Firebase (مطلوب للتعامل مع البيانات)          -->
+<!-- ========================================================================= -->
+<script type="module">
+    // استيراد وظائف Firebase الأساسية
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, Timestamp, setLogLevel, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    // تعريف المتغيرات العامة التي سيتم استخدامها في التطبيق
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+    let db = null;
+    let auth = null;
+    let userId = null;
+    let isAuthReady = false; // flag to indicate firebase is initialized and auth state is known
+    
+    // =========================================================================
+    //               وظائف مسارات Firestore (تبعاً لقواعد الأمان)
+    // =========================================================================
+    /**
+     * يحصل على مسار مجموعة الحجوزات العامة.
+     * المسار وفقاً لقواعد الأمان هو: /artifacts/{appId}/public/data/public_bookings
+     */
+    function getPublicBookingsCollectionPath() {
+        return `artifacts/${appId}/public/data/public_bookings`;
+    }
+
+    /**
+     * تهيئة Firebase والمصادقة.
+     */
+    async function initializeFirebase() {
+        try {
+            // تفعيل سجلات التصحيح لرؤية عمليات Firestore في الـ console
+            setLogLevel('debug');
+
+            // 1. التهيئة
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            // 2. المصادقة (تعتمد على التوكن المخصص أو التسجيل المجهول)
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+                console.log("Firebase: تم تسجيل الدخول باستخدام التوكن المخصص.");
+            } else {
+                await signInAnonymously(auth);
+                console.log("Firebase: تم تسجيل الدخول كمجهول.");
+            }
+
+            // 3. مستمع لتغير حالة المصادقة
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // استخدام الـ UID كمعرّف للمستخدمين الموثقين
+                    userId = user.uid;
+                    console.log("User ID set:", userId);
+                } else {
+                    // استخدام UUID عشوائي كمعرّف للمستخدمين غير الموثقين
+                    userId = crypto.randomUUID();
+                    console.log("User signed out, using fallback UUID:", userId);
+                }
+                isAuthReady = true;
+                console.log("Firebase: المصادقة جاهزة، يمكن بدء منطق التطبيق.");
+                
+                // **** هنا يمكنك استدعاء الدالة الرئيسية لبدء التطبيق والتفاعل مع Firestore ****
+                // مثال: startApplicationLogic();
+                setupEventListeners();
+                if (window.adminModalInstance && window.adminModalInstance.isOpen) {
+                    loadAdminData(); // تحميل البيانات إذا كانت لوحة المدير مفتوحة
+                }
+            });
+
+        } catch (error) {
+            console.error("خطأ في تهيئة أو مصادقة Firebase:", error);
+            // قد تحتاج إلى إظهار رسالة خطأ للمستخدم هنا
+        }
+    }
+
+    // استدعاء دالة التهيئة عند تحميل الصفحة
+    initializeFirebase();
+
+    // جعل المتغيرات متاحة عالمياً (ضروري لتفاعل باقي سكريبتات الصفحة معها)
+    window.db = db;
+    window.auth = auth;
+    window.userId = userId;
+    window.isAuthReady = isAuthReady;
+    window.getPublicBookingsCollectionPath = getPublicBookingsCollectionPath;
+    window.Timestamp = Timestamp;
+    window.collection = collection;
+    window.addDoc = addDoc;
+    window.query = query;
+    window.onSnapshot = onSnapshot;
+    window.where = where;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.deleteDoc = deleteDoc;
+    window.getDocs = getDocs;
+
+    // =========================================================================
+    //                 منطق واجهة المستخدم (UI Logic)
+    // =========================================================================
+
+    // بيانات الفترات المتاحة للحجز (الاسم ، المدة بالدقائق)
+    const breakPeriods = [
+        { name: 'البريك الأول', duration: 15 },
+        { name: 'البريك الثاني', duration: 15 },
+        { name: 'البريك الثالث', duration: 15 },
+        { name: 'البريك الرابع', duration: 15 }
+    ];
+    
+    // قائمة الأقسام (يمكن تحديثها)
+    const departments = [
+        "قسم التسويق",
+        "قسم المبيعات",
+        "قسم الموارد البشرية",
+        "قسم التطوير",
+        "قسم المالية"
+    ];
+
+    let currentBookings = []; // لتخزين الحجوزات الحالية محليًا
+    let selectedDepartment = departments[0]; // القسم الافتراضي
+    let selectedBreak = breakPeriods[0].name; // البريك الافتراضي
+    let isBookingLoading = false; // حالة التحميل للحجز
+
+    /**
+     * دالة مساعدة لإنشاء وإدارة إطار التنبيه/الرسائل
+     * (بديل لـ alert() و confirm())
+     */
+    function showMessageModal(title, message, type = 'info') {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'messageModalOverlay';
+
+        let bgColor = '';
+        let icon = '';
+        let iconColor = '';
+        let btnColor = '';
+
+        switch (type) {
+            case 'success':
+                bgColor = 'bg-secondary-green/10 dark:bg-secondary-green/20';
+                icon = '<i data-feather="check-circle" class="w-7 h-7"></i>';
+                iconColor = 'text-secondary-green';
+                btnColor = 'bg-secondary-green hover:bg-emerald-600';
+                break;
+            case 'error':
+                bgColor = 'bg-danger-red/10 dark:bg-danger-red/20';
+                icon = '<i data-feather="alert-triangle" class="w-7 h-7"></i>';
+                iconColor = 'text-danger-red';
+                btnColor = 'bg-danger-red hover:bg-red-600';
+                break;
+            case 'warning':
+                bgColor = 'bg-gold-star/10 dark:bg-gold-star/20';
+                icon = '<i data-feather="alert-octagon" class="w-7 h-7"></i>';
+                iconColor = 'text-gold-star';
+                btnColor = 'bg-gold-star hover:bg-yellow-600';
+                break;
+            default:
+                bgColor = 'bg-light-blue/10 dark:bg-light-blue/20';
+                icon = '<i data-feather="info" class="w-7 h-7"></i>';
+                iconColor = 'text-light-blue';
+                btnColor = 'bg-light-blue hover:bg-blue-600';
+                break;
+        }
+
+        overlay.innerHTML = `
+            <div class="card p-6 w-11/12 max-w-sm rounded-xl ${bgColor} dark:bg-gray-800 border-t-4 ${iconColor.replace('text-', 'border-')} transform transition-all scale-100 animate-in fade-in zoom-in-50">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 ${iconColor}">
+                        ${icon}
+                    </div>
+                    <div class="mr-4 w-full">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">${title}</h3>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">${message}</p>
+                    </div>
+                </div>
+                <div class="mt-5">
+                    <button id="closeModalButton" class="w-full ${btnColor} text-white font-bold py-2 rounded-lg transition-colors shadow-md hover:shadow-lg">
+                        إغلاق
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        feather.replace(); // إعادة تحميل الأيقونات داخل الـ modal
+
+        document.getElementById('closeModalButton').onclick = () => {
+            overlay.remove();
+        };
+    }
+    
+    /**
+     * دالة مساعدة لإنشاء وإدارة إطار التنبيه/الرسائل (للتأكيد)
+     * (بديل لـ confirm())
+     */
+    function showConfirmationModal(title, message, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'confirmationModalOverlay';
+
+        overlay.innerHTML = `
+            <div class="card p-6 w-11/12 max-w-sm rounded-xl bg-white dark:bg-gray-800 border-t-4 border-danger-red transform transition-all scale-100 animate-in fade-in zoom-in-50">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 text-danger-red">
+                        <i data-feather="alert-triangle" class="w-7 h-7"></i>
+                    </div>
+                    <div class="mr-4 w-full">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">${title}</h3>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">${message}</p>
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end space-x-3 space-x-reverse">
+                    <button id="cancelButton" class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        إلغاء
+                    </button>
+                    <button id="confirmButton" class="px-4 py-2 text-sm font-semibold text-white bg-danger-red hover:bg-red-600 rounded-lg transition-colors shadow-md hover:shadow-lg">
+                        تأكيد الحذف
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        feather.replace();
+
+        const close = () => overlay.remove();
+
+        document.getElementById('cancelButton').onclick = close;
+        document.getElementById('confirmButton').onclick = () => {
+            onConfirm();
+            close();
+        };
+    }
+
+    /**
+     * إنشاء خيارات القائمة المنسدلة للأقسام.
+     */
+    function populateDepartmentDropdown() {
+        const select = document.getElementById('departmentSelect');
+        if (!select) return;
+
+        select.innerHTML = '';
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept;
+            option.textContent = dept;
+            select.appendChild(option);
+        });
+        select.value = selectedDepartment; // تعيين القيمة الافتراضية
+    }
+
+    /**
+     * إنشاء أزرار الفترات الزمنية.
+     */
+    function renderBreakButtons() {
+        const container = document.getElementById('breakButtonsContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+        breakPeriods.forEach((period, index) => {
+            const isSelected = period.name === selectedBreak;
+            const button = document.createElement('button');
+            button.className = `
+                px-4 py-3 rounded-xl font-bold transition-all duration-200 text-sm md:text-base
+                ${isSelected
+                    ? 'bg-primary-indigo text-white shadow-lg shadow-indigo-500/50 scale-105'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }
+            `;
+            button.textContent = period.name;
+            button.dataset.breakName = period.name;
+            button.onclick = () => selectBreak(period.name);
+            container.appendChild(button);
+        });
+    }
+
+    /**
+     * تحديث حالة البريك المختار.
+     */
+    function selectBreak(breakName) {
+        selectedBreak = breakName;
+        renderBreakButtons();
+        updateBookingSummary();
+        renderBookingGrid();
+    }
+    
+    /**
+     * تحديث ملخص الحجز أسفل القائمة المنسدلة.
+     */
+    function updateBookingSummary() {
+        const summaryElement = document.getElementById('bookingSummary');
+        if (!summaryElement) return;
+
+        const totalBookings = currentBookings.filter(b => b.breakName === selectedBreak).length;
+        const maxCapacity = 2; // الحد الأقصى الافتراضي للحجز (يمكن جعله إعداداً)
+        const remainingSlots = maxCapacity - totalBookings;
+
+        let statusText = '';
+        let statusColor = '';
+
+        if (remainingSlots > 0) {
+            statusText = `توجد ${remainingSlots} أماكن متاحة للحجز.`;
+            statusColor = 'text-secondary-green dark:text-emerald-400';
+        } else {
+            statusText = 'البريك محجوز بالكامل، اختر وقتاً آخر.';
+            statusColor = 'text-danger-red dark:text-red-400';
+        }
+
+        // تحديث زر الحجز بناءً على التوفر
+        const bookButton = document.getElementById('bookBreakButton');
+        if (bookButton) {
+            bookButton.disabled = remainingSlots <= 0 || isBookingLoading;
+            bookButton.classList.toggle('opacity-50', remainingSlots <= 0 || isBookingLoading);
+            bookButton.textContent = isBookingLoading ? 'جاري الحجز...' : 'حجز البريك';
+        }
+
+        summaryElement.innerHTML = `
+            <span class="text-xs font-semibold ${statusColor}">
+                ${selectedBreak}: ${statusText}
+            </span>
+        `;
+    }
+
+    /**
+     * عرض شبكة الحجوزات الحالية (الجدول).
+     */
+    function renderBookingGrid() {
+        const gridContainer = document.getElementById('bookingGrid');
+        if (!gridContainer) return;
+
+        const relevantBookings = currentBookings.filter(b => b.breakName === selectedBreak);
+        gridContainer.innerHTML = ''; // مسح المحتوى القديم
+
+        if (relevantBookings.length === 0) {
+            gridContainer.innerHTML = `
+                <div class="text-center p-6 text-gray-500 dark:text-gray-400">
+                    <i data-feather="calendar" class="w-10 h-10 mx-auto mb-2"></i>
+                    <p class="font-medium">لم يتم حجز ${selectedBreak} بعد.</p>
+                </div>
+            `;
+            feather.replace();
+            return;
+        }
+
+        relevantBookings.forEach(booking => {
+            const isUserBooking = booking.userId === userId; // تحديد ما إذا كان الحجز للمستخدم الحالي
+            const bookingTime = booking.createdAt ? new Date(booking.createdAt.seconds * 1000).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'وقت غير متوفر';
+
+            const card = document.createElement('div');
+            card.className = `
+                p-4 rounded-xl border-r-4 shadow-md transition-shadow duration-300
+                ${isUserBooking
+                    ? 'bg-primary-indigo/10 dark:bg-primary-indigo/20 border-primary-indigo hover:shadow-lg'
+                    : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:shadow-lg'
+                }
+            `;
+            
+            card.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <p class="font-bold text-gray-800 dark:text-white">${booking.departmentName}</p>
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">${bookingTime}</span>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${booking.breakName}</p>
+                
+                ${isUserBooking ? `
+                    <div class="mt-3 flex justify-end">
+                        <button data-id="${booking.id}" class="cancel-booking-btn text-xs font-semibold text-danger-red hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors flex items-center">
+                            <i data-feather="trash-2" class="w-4 h-4 ml-1"></i>
+                            إلغاء الحجز
+                        </button>
+                    </div>
+                ` : ''}
+            `;
+            gridContainer.appendChild(card);
+        });
+
+        feather.replace(); // إعادة تحميل الأيقونات
+
+        // إرفاق مستمعي الأحداث لأزرار الإلغاء
+        document.querySelectorAll('.cancel-booking-btn').forEach(button => {
+            button.onclick = (e) => {
+                const bookingId = e.currentTarget.dataset.id;
+                handleCancelBooking(bookingId);
+            };
+        });
+    }
+
+    /**
+     * معالجة محاولة الحجز.
+     */
+    async function handleBookBreak() {
+        if (!isAuthReady || !db || !userId) {
+            showMessageModal('خطأ في الاتصال', 'الرجاء الانتظار حتى يتم الاتصال بخدمة قاعدة البيانات.', 'warning');
+            return;
+        }
+
+        // 1. التحقق من وجود حجز لنفس المستخدم لهذا البريك اليوم
+        const existingUserBooking = currentBookings.find(b => 
+            b.userId === userId && b.breakName === selectedBreak
+        );
+        if (existingUserBooking) {
+            showMessageModal('حجز مكرر', `لقد قمت بالفعل بحجز ${selectedBreak} اليوم.`, 'warning');
+            return;
+        }
+
+        // 2. التحقق من السعة المتبقية
+        const maxCapacity = 2; 
+        const totalBookings = currentBookings.filter(b => b.breakName === selectedBreak).length;
+        if (totalBookings >= maxCapacity) {
+            showMessageModal('محجوز بالكامل', `عفواً، ${selectedBreak} محجوز بالكامل لهذا اليوم.`, 'error');
+            return;
+        }
+
+        // 3. التحضير للحجز
+        const newBooking = {
+            departmentName: selectedDepartment,
+            breakName: selectedBreak,
+            userId: userId,
+            createdAt: Timestamp.now(),
+            dateString: new Date().toISOString().slice(0, 10) // لتسهيل الفلترة اليومية
+        };
+
+        isBookingLoading = true;
+        updateBookingSummary(); // تحديث حالة زر الحجز
+        
+        try {
+            // إضافة الوثيقة إلى مجموعة الحجوزات العامة
+            const colRef = collection(db, getPublicBookingsCollectionPath());
+            await addDoc(colRef, newBooking);
+            
+            showMessageModal('تم الحجز بنجاح', `تم حجز ${selectedBreak} لقسم ${selectedDepartment}.`, 'success');
+
+        } catch (error) {
+            console.error("خطأ في إضافة الحجز:", error);
+            showMessageModal('فشل الحجز', 'حدث خطأ أثناء محاولة حجز البريك. الرجاء المحاولة مرة أخرى.', 'error');
+        } finally {
+            isBookingLoading = false;
+            updateBookingSummary(); // إعادة زر الحجز لوضعه الطبيعي
+        }
+    }
+
+    /**
+     * معالجة إلغاء الحجز.
+     */
+    function handleCancelBooking(bookingId) {
+        showConfirmationModal(
+            'تأكيد الإلغاء', 
+            'هل أنت متأكد من رغبتك في إلغاء هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.',
+            async () => {
+                if (!isAuthReady || !db) return;
+                
+                try {
+                    // حذف الوثيقة من Firestore
+                    const docRef = doc(db, getPublicBookingsCollectionPath(), bookingId);
+                    await deleteDoc(docRef);
+                    showMessageModal('تم الإلغاء', 'تم إلغاء حجزك بنجاح.', 'success');
+                } catch (error) {
+                    console.error("خطأ في إلغاء الحجز:", error);
+                    showMessageModal('فشل الإلغاء', 'حدث خطأ أثناء إلغاء الحجز. الرجاء المحاولة مرة أخرى.', 'error');
+                }
+            }
+        );
+    }
+
+    // =========================================================================
+    //               تحميل البيانات في الوقت الفعلي (Firestore Listener)
+    // =========================================================================
+    function startDataListener() {
+        if (!isAuthReady || !db) {
+            // إذا لم تكن المصادقة جاهزة، انتظر حتى يتم تشغيل onAuthStateChanged
+            console.log("Firestore Listener: المصادقة غير جاهزة بعد، جاري الانتظار...");
+            return; 
+        }
+
+        const today = new Date().toISOString().slice(0, 10); // تنسيق YYYY-MM-DD
+        const bookingsColRef = collection(db, getPublicBookingsCollectionPath());
+        
+        // إنشاء استعلام للحجوزات ليومنا هذا فقط
+        const q = query(
+            bookingsColRef,
+            where("dateString", "==", today)
+        );
+
+        // إنشاء مستمع onSnapshot للتحديثات في الوقت الفعلي
+        onSnapshot(q, (snapshot) => {
+            console.log("Firestore: تم استلام تحديث جديد للحجوزات.");
+            
+            // تحويل البيانات من Firestore إلى مصفوفة JavaScript
+            currentBookings = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            // إعادة عرض الواجهة بناءً على البيانات الجديدة
+            renderBookingGrid();
+            updateBookingSummary();
+            // تحديث لوحة المدير إذا كانت مفتوحة
+            if (window.adminModalInstance && window.adminModalInstance.isOpen) {
+                renderAdminBookings();
+            }
+
+        }, (error) => {
+            console.error("خطأ في مستمع Firestore:", error);
+            showMessageModal('خطأ في الاتصال', 'فشل الاتصال بقاعدة البيانات. الرجاء تحديث الصفحة.', 'error');
+        });
+    }
+
+    // =========================================================================
+    //                       منطق لوحة المدير (Admin Panel Logic)
+    // =========================================================================
+
+    const ADMIN_CODE = "12345"; // رمز المدير الافتراضي
+
+    let adminModalInstance = {
+        isOpen: false,
+        element: null
+    };
+
+    /**
+     * فتح أو إغلاق لوحة المدير.
+     */
+    function toggleAdminModal(open) {
+        const modal = document.getElementById('adminModal');
+        if (!modal) return;
+
+        if (open) {
+            modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            adminModalInstance.isOpen = true;
+            // إخفاء محتوى المدير حتى يتم تسجيل الدخول
+            document.getElementById('adminContent').classList.add('hidden');
+            document.getElementById('adminLoginForm').classList.remove('hidden');
+            document.getElementById('adminCode').value = '';
+
+            // تفعيل listener عندما يتم فتح اللوحة
+            if (isAuthReady) {
+                loadAdminData();
+            }
+        } else {
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+            adminModalInstance.isOpen = false;
+        }
+    }
+    
+    /**
+     * محاولة تسجيل الدخول للمدير.
+     */
+    function handleAdminLogin() {
+        const codeInput = document.getElementById('adminCode');
+        if (codeInput.value === ADMIN_CODE) {
+            document.getElementById('adminLoginForm').classList.add('hidden');
+            document.getElementById('adminContent').classList.remove('hidden');
+            loadAdminData();
+            showMessageModal('نجاح', 'تم تسجيل الدخول كمدير.', 'success');
+        } else {
+            showMessageModal('خطأ', 'رمز المدير غير صحيح.', 'error');
+        }
+    }
+
+    /**
+     * تسجيل خروج المدير.
+     */
+    function handleAdminLogout() {
+        document.getElementById('adminContent').classList.add('hidden');
+        document.getElementById('adminLoginForm').classList.remove('hidden');
+        showMessageModal('تسجيل الخروج', 'تم تسجيل خروج المدير بنجاح.', 'info');
+    }
+
+    /**
+     * تحميل وعرض البيانات في لوحة المدير (يعتمد على currentBookings).
+     */
+    function loadAdminData() {
+        // تحديث إعدادات المدير
+        renderAdminSettings();
+        // عرض قائمة الحجوزات
+        renderAdminBookings();
+    }
+
+    /**
+     * عرض قائمة الحجوزات في لوحة المدير.
+     */
+    function renderAdminBookings() {
+        const listContainer = document.getElementById('adminBookingsList');
+        if (!listContainer) return;
+
+        // فرز الحجوزات حسب اسم البريك ثم حسب وقت الإنشاء
+        const sortedBookings = [...currentBookings].sort((a, b) => {
+            const breakOrderA = breakPeriods.findIndex(p => p.name === a.breakName);
+            const breakOrderB = breakPeriods.findIndex(p => p.name === b.breakName);
+
+            if (breakOrderA !== breakOrderB) {
+                return breakOrderA - breakOrderB;
+            }
+            // إذا كانت نفس الفترة، افرز حسب الأحدث (الأحدث يظهر أولاً)
+            const timeA = a.createdAt?.seconds || 0;
+            const timeB = b.createdAt?.seconds || 0;
+            return timeB - timeA; 
+        });
+
+        if (sortedBookings.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center p-6 text-gray-500 dark:text-gray-400">
+                    <i data-feather="database" class="w-8 h-8 mx-auto mb-2"></i>
+                    <p class="font-medium">لا توجد حجوزات لهذا اليوم.</p>
+                </div>
+            `;
+            feather.replace();
+            return;
+        }
+
+        let html = '';
+        let currentBreak = null;
+
+        sortedBookings.forEach(booking => {
+            const bookingTime = booking.createdAt ? new Date(booking.createdAt.seconds * 1000).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A';
+            
+            if (booking.breakName !== currentBreak) {
+                currentBreak = booking.breakName;
+                html += `<h4 class="sticky top-0 p-3 bg-gray-50 dark:bg-gray-700 text-primary-indigo dark:text-light-blue font-extrabold border-b border-gray-200 dark:border-gray-600 mt-2">${currentBreak} (${sortedBookings.filter(b => b.breakName === currentBreak).length} حجوزات)</h4>`;
+            }
+
+            html += `
+                <div class="flex justify-between items-center p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <div>
+                        <p class="font-semibold text-gray-900 dark:text-white">${booking.departmentName}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">وقت الحجز: ${bookingTime} - <span class="text-2xs font-mono select-all">${booking.userId.substring(0, 8)}...</span></p>
+                    </div>
+                    <button data-id="${booking.id}" class="admin-delete-btn text-danger-red hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors">
+                        <i data-feather="x-circle" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            `;
+        });
+
+        listContainer.innerHTML = html;
+        feather.replace();
+
+        // إرفاق مستمعي أحداث الحذف
+        document.querySelectorAll('.admin-delete-btn').forEach(button => {
+            button.onclick = (e) => {
+                const bookingId = e.currentTarget.dataset.id;
+                handleAdminDeleteBooking(bookingId);
+            };
+        });
+    }
+
+    /**
+     * معالجة حذف حجز من لوحة المدير.
+     */
+    function handleAdminDeleteBooking(bookingId) {
+        showConfirmationModal(
+            'حذف حجز المدير', 
+            'هل أنت متأكد من حذف هذا الحجز؟ هذا الإجراء لا يمكن التراجع عنه.',
+            async () => {
+                if (!isAuthReady || !db) return;
+                
+                try {
+                    const docRef = doc(db, getPublicBookingsCollectionPath(), bookingId);
+                    await deleteDoc(docRef);
+                    showMessageModal('تم الحذف', 'تم حذف الحجز بنجاح.', 'success');
+                } catch (error) {
+                    console.error("خطأ في حذف حجز المدير:", error);
+                    showMessageModal('فشل الحذف', 'حدث خطأ أثناء حذف الحجز. الرجاء المحاولة مرة أخرى.', 'error');
+                }
+            }
+        );
+    }
+    
+    /**
+     * عرض إعدادات المدير (مثل زر مسح كل الحجوزات).
+     */
+    function renderAdminSettings() {
+        const container = document.getElementById('adminSettingsContainer');
+        if (!container) return;
+
+        // التحقق مما إذا كان الزر موجودًا لتجنب تكرار الإرفاق
+        if (container.querySelector('#deleteAllBookingsButton')) return; 
+
+        const deleteAllButton = document.createElement('button');
+        deleteAllButton.id = 'deleteAllBookingsButton';
+        deleteAllButton.className = 'w-full bg-danger-red hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center';
+        deleteAllButton.innerHTML = '<i data-feather="alert-octagon" class="w-5 h-5 ml-2"></i> مسح جميع حجوزات اليوم';
+        
+        deleteAllButton.onclick = handleAdminDeleteAllBookings;
+        container.appendChild(deleteAllButton);
+        feather.replace();
+    }
+
+    /**
+     * معالجة مسح جميع الحجوزات اليومية.
+     */
+    function handleAdminDeleteAllBookings() {
+        showConfirmationModal(
+            'مسح كل الحجوزات', 
+            '⚠️ تحذير: هل أنت متأكد من حذف جميع الحجوزات لهذا اليوم؟ لا يمكن التراجع عن هذا الإجراء.',
+            async () => {
+                if (!isAuthReady || !db) return;
+                
+                try {
+                    const today = new Date().toISOString().slice(0, 10);
+                    const bookingsColRef = collection(db, getPublicBookingsCollectionPath());
+                    const q = query(bookingsColRef, where("dateString", "==", today));
+                    
+                    const snapshot = await getDocs(q);
+                    
+                    if (snapshot.empty) {
+                        showMessageModal('لا يوجد شيء للحذف', 'لا توجد حجوزات لحذفها لهذا اليوم.', 'info');
+                        return;
+                    }
+
+                    // حذف كل وثيقة بشكل منفصل (لا تدعم Firestore الحذف الجماعي مباشرة في الويب SDK)
+                    const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+                    await Promise.all(deletePromises);
+                    
+                    showMessageModal('تم المسح بنجاح', `تم حذف ${snapshot.size} حجزاً بنجاح لهذا اليوم.`, 'success');
+
+                } catch (error) {
+                    console.error("خطأ في مسح جميع الحجوزات:", error);
+                    showMessageModal('فشل المسح', 'حدث خطأ أثناء مسح جميع الحجوزات. الرجاء مراجعة الـ console.', 'error');
+                }
+            }
+        );
+    }
+
+
+    // =========================================================================
+    //                 إعداد المستمعين للأحداث (Event Listeners)
+    // =========================================================================
+    function setupEventListeners() {
+        // إذا كان المستمع جاهزاً، ابدأ بالاستماع للبيانات
+        if (isAuthReady) {
+            startDataListener(); 
+        } else {
+            // وإلا، ستبدأ الدالة عند اكتمال المصادقة في onAuthStateChanged
+        }
+
+        // Dropdown تغيير القسم
+        const departmentSelect = document.getElementById('departmentSelect');
+        if (departmentSelect) {
+            departmentSelect.onchange = (e) => {
+                selectedDepartment = e.target.value;
+            };
+        }
+
+        // زر حجز البريك
+        const bookButton = document.getElementById('bookBreakButton');
+        if (bookButton) {
+            bookButton.onclick = handleBookBreak;
+        }
+        
+        // زر فتح لوحة المدير
+        const adminButton = document.getElementById('openAdminModal');
+        if (adminButton) {
+            adminButton.onclick = () => toggleAdminModal(true);
+        }
+
+        // إغلاق لوحة المدير
+        const adminCloseButton = document.getElementById('adminCloseButton');
+        if (adminCloseButton) {
+            adminCloseButton.onclick = () => toggleAdminModal(false);
+        }
+        
+        // تسجيل دخول المدير
+        const adminLoginButton = document.getElementById('adminLoginButton');
+        if (adminLoginButton) {
+            adminLoginButton.onclick = handleAdminLogin;
+        }
+
+        // تسجيل خروج المدير
+        const adminLogoutButton = document.getElementById('adminLogoutButton');
+        if (adminLogoutButton) {
+            adminLogoutButton.onclick = handleAdminLogout;
+        }
+
+
+        // تهيئة العناصر عند التحميل
+        populateDepartmentDropdown();
+        renderBreakButtons();
+        updateBookingSummary();
+        renderBookingGrid(); // العرض المبدئي قبل تحميل البيانات
+    }
+
+
+    window.onload = () => {
+        // تهيئة الأيقونات
+        feather.replace();
+        // بدء إعداد المستمعات والأحداث بعد تحميل الصفحة بالكامل
+        if (isAuthReady) {
+            setupEventListeners();
+        } else {
+            // إذا لم تكن المصادقة جاهزة بعد، فسيتم استدعاء setupEventListeners
+            // ضمن onAuthStateChanged لضمان أن كل شيء تم تهيئته.
+        }
+    };
+
+
+    // =========================================================================
+    //                       منطق الوضع الداكن (Dark Mode)
+    // =========================================================================
+    function toggleDarkMode() {
+        const html = document.documentElement;
+        html.classList.toggle('dark');
+        const isDark = html.classList.contains('dark');
+        localStorage.setItem('darkMode', isDark);
+
+        // تحديث أيقونة الزر
+        const toggleButton = document.getElementById('darkModeToggle');
+        if (toggleButton) {
+            toggleButton.innerHTML = `<i data-feather="${isDark ? 'sun' : 'moon'}" class="w-6 h-6"></i>`;
+            feather.replace();
+        }
+    }
+
+    // تطبيق الوضع الداكن من localStorage عند التحميل
+    if (localStorage.getItem('darkMode') === 'true' || 
+        (!('darkMode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    }
+    
+    // إرفاق مستمع الحدث لزر الوضع الداكن
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleButton = document.getElementById('darkModeToggle');
+        if (toggleButton) {
+            toggleButton.onclick = toggleDarkMode;
+            // تحديث الأيقونة عند التحميل
+            const isDark = document.documentElement.classList.contains('dark');
+            toggleButton.innerHTML = `<i data-feather="${isDark ? 'sun' : 'moon'}" class="w-6 h-6"></i>`;
+            feather.replace();
+        }
+    });
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors p-4 md:p-8">
+
+    <!-- لوحة المدير (Admin Modal) -->
+    <div id="adminModal" class="modal-overlay hidden">
+        <div class="card bg-white dark:bg-gray-800 p-6 w-11/12 max-w-lg rounded-xl transform transition-all scale-100 animate-in fade-in zoom-in-50">
+            
+            <!-- رأس لوحة المدير -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-extrabold text-primary-indigo dark:text-light-blue">لوحة إدارة الحجوزات</h2>
+                <button id="adminCloseButton" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-feather="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- نموذج تسجيل دخول المدير -->
+            <div id="adminLoginForm">
+                <p class="text-gray-600 dark:text-gray-400 mb-3">الرجاء إدخال رمز المدير للمتابعة.</p>
+                <input type="password" id="adminCode" placeholder="رمز المدير" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white font-medium mb-4" />
+                <button id="adminLoginButton" class="w-full bg-primary-indigo hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors">
+                    تسجيل الدخول
+                </button>
+            </div>
+
+            <!-- محتوى المدير (يظهر بعد تسجيل الدخول) -->
+            <div id="adminContent" class="hidden">
+                <div id="adminSettingsContainer" class="mb-4"></div>
+
+                <p class="text-sm font-semibold text-red-600 dark:text-red-400 mb-4">⚠️ تنبيه: الحذف هنا يؤثر على حجوزات اليوم الحالي فقط.</p>
+                
+                <!-- قائمة الحجوزات للعرض -->
+                <div id="adminBookingsList" class="max-h-80 overflow-y-auto no-scrollbar border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <!-- سيتم ملء هذا القسم بواسطة JavaScript -->
+                </div>
+
+                <button id="adminLogoutButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors mt-4">
+                    تسجيل الخروج من لوحة المدير
+                </button>
+            </div>
+
+        </div>
     </div>
 
-    <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-6 md:p-10">
+
+    <!-- واجهة التطبيق الرئيسية -->
+    <div class="max-w-4xl mx-auto">
         
-        <!-- العنوان ومعرف المستخدم -->
-        <header class="text-center mb-8 border-b pb-4 border-gray-100 dark:border-gray-700">
-            <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
-                رفيق وقت البريك ☕
+        <!-- الرأس والأزرار (Toggle + Admin) -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">
+                Break Time Buddy
             </h1>
-            <p class="text-lg text-gray-600 dark:text-gray-400">
-                جدول حجز البريكات لليوم الحالي (من الساعة ٨ صباحاً إلى ٤ مساءً)
-            </p>
-            <div class="mt-3 text-xs text-gray-500 dark:text-gray-500">
-                معرّف المستخدم: <span id="userIdDisplay" class="font-mono text-xs text-primary-indigo dark:text-light-blue bg-gray-100 dark:bg-gray-700 p-1 rounded-md cursor-pointer" onclick="copyUserId()">Loading...</span>
+            <div class="flex space-x-2 space-x-reverse">
+                <button id="openAdminModal" class="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="لوحة المدير">
+                    <i data-feather="lock" class="w-6 h-6"></i>
+                </button>
+                <button id="darkModeToggle" class="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="تبديل الوضع الداكن">
+                    <!-- الأيقونة سيتم تحديثها بواسطة JS -->
+                </button>
             </div>
         </header>
 
-        <!-- منطقة اختيار القسم وتعديل الإعدادات -->
-        <div class="mb-8 p-5 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-inner">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center justify-between">
-                <span>تعديل إعدادات الحجز</span>
-                <button id="adminButton" class="text-sm text-primary-indigo hover:text-indigo-700 dark:text-light-blue dark:hover:text-blue-400 font-medium flex items-center">
-                    <i data-feather="lock" class="w-4 h-4 ml-1"></i>
-                    وضع المدير
-                </button>
-            </h2>
+        <!-- بطاقة الحجز الرئيسية -->
+        <div class="card bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">جدول حجز البريكات للأقسام</h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">احجز الفترة الزمنية لبريك قسمك لضمان عدم تداخل المواعيد.</p>
             
-            <!-- اختيار القسم (Department Selection) -->
-            <div class="mb-4">
-                <label for="departmentSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    القسم الحالي:
-                </label>
-                <select id="departmentSelect" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-800 dark:text-white font-medium">
-                    <option value="القسم 1">القسم 1</option>
-                    <option value="القسم 2">القسم 2</option>
-                    <option value="القسم 3">القسم 3</option>
-                </select>
-            </div>
-
-            <!-- إعدادات عدد البريكات (Settings) -->
-            <div class="flex items-center space-x-4 space-x-reverse">
-                <div class="flex-1">
-                    <label for="maxBreaksInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        عدد البريكات المسموح بها لكل شخص:
-                    </label>
-                    <input type="number" id="maxBreaksInput" value="1" min="1" max="5" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-800 dark:text-white font-medium" />
-                </div>
-                <div class="flex-1">
-                    <label for="breakDurationInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        مدة البريك (دقائق):
-                    </label>
-                    <select id="breakDurationInput" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-800 dark:text-white font-medium">
-                        <option value="15">15 دقيقة</option>
-                        <option value="20">20 دقيقة</option>
-                        <option value="30">30 دقيقة</option>
-                    </select>
-                </div>
-            </div>
-            
-        </div>
-
-        <!-- جدول الحجوزات -->
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            جدول البريكات المحجوزة
-        </h2>
-        
-        <!-- حاوية لعرض الجدول -->
-        <div id="bookingsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <!-- سيتم إنشاء مربعات الحجز ديناميكياً هنا -->
-        </div>
-        
-        <!-- نموذج وضع المدير (Modal) -->
-        <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 z-40 hidden flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6 relative">
+            <!-- نموذج الحجز -->
+            <div class="space-y-6">
                 
-                <!-- عنوان وأزرار الإغلاق -->
-                <div class="flex justify-between items-center border-b pb-3 mb-4 dark:border-gray-700">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">وضع المدير</h3>
-                    <button id="closeAdminModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <i data-feather="x" class="w-6 h-6"></i>
-                    </button>
+                <!-- اختيار القسم -->
+                <div>
+                    <label for="departmentSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">1. اختر قسمك:</label>
+                    <div class="relative">
+                        <select id="departmentSelect" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg appearance-none focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white font-medium">
+                            <!-- خيارات الأقسام يتم ملؤها بواسطة JS -->
+                        </select>
+                        <i data-feather="chevron-down" class="w-5 h-5 absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none"></i>
+                    </div>
                 </div>
 
-                <!-- نموذج تسجيل الدخول للمدير -->
-                <div id="adminLoginForm">
-                    <p class="text-gray-600 dark:text-gray-400 mb-3">الرجاء إدخال رمز المدير للمتابعة.</p>
-                    <input type="password" id="adminCode" placeholder="رمز المدير" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary-indigo focus:border-primary-indigo dark:bg-gray-700 dark:text-white font-medium mb-4" />
-                    <button id="adminLoginButton" class="w-full bg-primary-indigo hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors">
-                        تسجيل الدخول
-                    </button>
+                <!-- اختيار فترة البريك -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">2. اختر فترة البريك:</label>
+                    <div id="breakButtonsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <!-- أزرار البريك يتم إنشاؤها بواسطة JS -->
+                    </div>
                 </div>
 
-                <!-- محتوى وضع المدير -->
-                <div id="adminContent" class="hidden">
-                    <div id="adminSettingsContainer" class="mb-4">
-                        <h4 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">إعدادات النظام العامة</h4>
-                        <div class="flex items-center space-x-4 space-x-reverse mb-4">
-                            <div class="flex-1">
-                                <label for="adminMaxBreaks" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريكات لكل شخص:</label>
-                                <input type="number" id="adminMaxBreaks" min="1" max="5" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-medium" />
-                            </div>
-                            <div class="flex-1">
-                                <label for="adminBreakDuration" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مدة البريك (دقائق):</label>
-                                <select id="adminBreakDuration" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-medium">
-                                    <option value="15">15 دقيقة</option>
-                                    <option value="20">20 دقيقة</option>
-                                    <option value="30">30 دقيقة</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button id="saveAdminSettingsButton" class="w-full bg-secondary-green hover:bg-green-600 text-white font-bold py-2 rounded-lg transition-colors mb-4">
-                            حفظ الإعدادات
+                <!-- زر الحجز والملخص -->
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-center mb-3">
+                        <button id="bookBreakButton" class="flex-grow bg-secondary-green hover:bg-emerald-600 text-white font-bold py-3 rounded-lg transition-colors shadow-md hover:shadow-lg disabled:opacity-50" disabled>
+                            حجز البريك
                         </button>
+                        <div id="bookingSummary" class="mr-4 p-2 rounded-lg">
+                            <!-- ملخص الحجز يتم تحديثه بواسطة JS -->
+                        </div>
                     </div>
-
-                    <h4 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">إدارة الحجوزات النشطة</h4>
-                    <p class="text-sm font-semibold text-red-600 dark:text-red-400 mb-4">⚠️ تنبيه: الحذف هنا يؤثر على حجوزات اليوم الحالي فقط.</p>
-                    <div id="adminBookingsList" class="max-h-80 overflow-y-auto no-scrollbar border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                        <!-- قائمة الحجوزات الحالية تظهر هنا -->
-                        <p id="noAdminBookings" class="text-center text-gray-500 dark:text-gray-400">لا توجد حجوزات نشطة حالياً.</p>
-                    </div>
-                    <button id="adminLogoutButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors mt-4">
-                        تسجيل الخروج
-                    </button>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 text-center">كل بريك متاح لـ 2 قسم كحد أقصى.</p>
                 </div>
-
             </div>
-        </div> <!-- End of main content container -->
+        </div>
+
+        <!-- بطاقة عرض الحجوزات -->
+        <div class="card bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-xl">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                <i data-feather="list" class="w-6 h-6 ml-2 text-primary-indigo"></i>
+                الحجوزات الحالية لليوم
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="bookingGrid">
+                <!-- سيتم عرض الحجوزات هنا بواسطة JavaScript -->
+            </div>
+        </div>
+
     </div>
 
-    <!-- ========================================================================= -->
-    <!--                  Firebase & App Logic Setup (الوحدة النمطية)                -->
-    <!-- ========================================================================= -->
-    <script type="module">
-        // استيراد وظائف Firebase المطلوبة
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, query, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // =========================================================================
-        //                            تهيئة الثوابت والمتغيرات
-        // =========================================================================
-
-        // تفعيل وضع التصحيح (Debug) لـ Firestore
-        setLogLevel('debug');
-
-        // التأكد من أن المتغيرات العامة متوفرة أو استخدام قيم افتراضية
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        const ADMIN_CODE = "1234"; // رمز المدير الثابت
-        const MAX_BREAKS_FIELD = 'maxBreaks';
-        const BREAK_DURATION_FIELD = 'breakDuration';
-        
-        // تهيئة Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // متغيرات الحالة
-        let currentUserId = null;
-        let isAdminMode = false;
-        let currentBookings = [];
-        let systemSettings = {};
-
-        // عناوين مسارات Firestore
-        const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'global');
-        const bookingsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'bookings');
-
-        // العناصر
-        const elements = {
-            userIdDisplay: document.getElementById('userIdDisplay'),
-            departmentSelect: document.getElementById('departmentSelect'),
-            maxBreaksInput: document.getElementById('maxBreaksInput'),
-            breakDurationInput: document.getElementById('breakDurationInput'),
-            bookingsGrid: document.getElementById('bookingsGrid'),
-            adminButton: document.getElementById('adminButton'),
-            adminModal: document.getElementById('adminModal'),
-            closeAdminModal: document.getElementById('closeAdminModal'),
-            adminLoginForm: document.getElementById('adminLoginForm'),
-            adminCode: document.getElementById('adminCode'),
-            adminLoginButton: document.getElementById('adminLoginButton'),
-            adminContent: document.getElementById('adminContent'),
-            adminMaxBreaks: document.getElementById('adminMaxBreaks'),
-            adminBreakDuration: document.getElementById('adminBreakDuration'),
-            saveAdminSettingsButton: document.getElementById('saveAdminSettingsButton'),
-            adminBookingsList: document.getElementById('adminBookingsList'),
-            adminLogoutButton: document.getElementById('adminLogoutButton'),
-            noAdminBookings: document.getElementById('noAdminBookings'),
-        };
-
-        // =========================================================================
-        //                            الدوال المساعدة
-        // =========================================================================
-
-        /** عرض رسالة تنبيه للمستخدم */
-        function showMessage(message, type = 'info') {
-            const messageBox = document.getElementById('messageBox');
-            const messageText = document.getElementById('messageText');
-            const messageIcon = document.getElementById('messageIcon');
-
-            messageText.textContent = message;
-
-            messageBox.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-2xl z-50 transition-opacity duration-300 flex items-center min-w-[300px] text-center';
-            messageIcon.innerHTML = '';
-
-            let bgColor, textColor, iconHtml;
-
-            switch (type) {
-                case 'success':
-                    bgColor = 'bg-secondary-green';
-                    textColor = 'text-white';
-                    iconHtml = '<i data-feather="check-circle" class="w-6 h-6 ml-2"></i>';
-                    break;
-                case 'error':
-                    bgColor = 'bg-danger-red';
-                    textColor = 'text-white';
-                    iconHtml = '<i data-feather="alert-octagon" class="w-6 h-6 ml-2"></i>';
-                    break;
-                case 'warning':
-                    bgColor = 'bg-gold-star';
-                    textColor = 'text-gray-800';
-                    iconHtml = '<i data-feather="alert-triangle" class="w-6 h-6 ml-2"></i>';
-                    break;
-                case 'info':
-                default:
-                    bgColor = 'bg-light-blue';
-                    textColor = 'text-white';
-                    iconHtml = '<i data-feather="info" class="w-6 h-6 ml-2"></i>';
-                    break;
-            }
-
-            messageBox.classList.add(bgColor, textColor);
-            messageIcon.innerHTML = iconHtml;
-            feather.replace(); // تحديث أيقونات Feather
-
-            messageBox.classList.remove('opacity-0', 'hidden');
-            messageBox.classList.add('opacity-100');
-
-            setTimeout(() => {
-                messageBox.classList.remove('opacity-100');
-                messageBox.classList.add('opacity-0');
-                setTimeout(() => {
-                    messageBox.classList.add('hidden');
-                }, 300);
-            }, 4000);
-        }
-
-        /** نسخ معرف المستخدم عند النقر */
-        function copyUserId() {
-            if (currentUserId) {
-                navigator.clipboard.writeText(currentUserId)
-                    .then(() => showMessage("تم نسخ معرّف المستخدم بنجاح!", 'success'))
-                    .catch(() => showMessage("فشل في النسخ. يرجى النسخ يدوياً.", 'warning'));
-            }
-        }
-        window.copyUserId = copyUserId; // لجعلها متاحة لـ onclick في HTML
-
-        /** تحويل كائن التاريخ إلى سلسلة زمنية (HH:MM) */
-        function formatTime(date) {
-            return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
-        }
-        
-        /** تحويل التاريخ إلى مفتاح يومي (YYYY-MM-DD) */
-        function getTodayKey() {
-            return new Date().toISOString().split('T')[0];
-        }
-
-        /** بناء قائمة الفترات الزمنية المتاحة (8:00 إلى 16:00) */
-        function generateTimeSlots(durationMinutes) {
-            const slots = [];
-            const startTime = new Date();
-            startTime.setHours(8, 0, 0, 0); // 8:00 AM
-
-            const endTime = new Date();
-            endTime.setHours(16, 0, 0, 0); // 4:00 PM (Exclusive)
-
-            let currentTime = startTime;
-
-            while (currentTime.getTime() < endTime.getTime()) {
-                const start = new Date(currentTime);
-                currentTime.setMinutes(currentTime.getMinutes() + durationMinutes);
-                const end = new Date(currentTime);
-
-                if (end.getTime() <= endTime.getTime()) {
-                    slots.push({
-                        id: `${formatTime(start)}-${formatTime(end)}`,
-                        start: formatTime(start),
-                        end: formatTime(end),
-                    });
-                }
-            }
-            return slots;
-        }
-
-        // =========================================================================
-        //                            وظائف المصادقة (Auth)
-        // =========================================================================
-
-        /** الوظيفة الرئيسية لتسجيل الدخول وتحديد معرف المستخدم */
-        async function initAuthAndApp() {
-            try {
-                // محاولة تسجيل الدخول باستخدام الرمز المخصص (Custom Token)
-                if (initialAuthToken) {
-                    console.log("Attempting sign in with Custom Token...");
-                    await signInWithCustomToken(auth, initialAuthToken);
-                    console.log("Sign in with Custom Token successful.");
-                } else {
-                    console.warn("Custom Auth Token is not available. Proceeding to check for existing session/local ID.");
-                }
-            } catch (error) {
-                // *** FIX: تجنب signInAnonymously الذي يسبب خطأ App Check ***
-                console.error("Firebase Sign-in Failed (Custom Token Error, bypassing Anonymous Sign-in):", error.message);
-            }
-
-            // مراقبة حالة المصادقة وتحديد معرف المستخدم النهائي
-            onAuthStateChanged(auth, (user) => {
-                let userId = null;
-                
-                if (user) {
-                    // 1. المستخدم مصادق عليه عبر الرمز المخصص (أو أي طريقة أخرى)
-                    userId = user.uid;
-                    console.log(`User Signed In. UID: ${userId}`);
-                } else {
-                    // 2. المستخدم غير مصادق عليه: استخدام معرف فريد محلي
-                    userId = localStorage.getItem('localUserId');
-                    if (!userId) {
-                        userId = crypto.randomUUID();
-                        localStorage.setItem('localUserId', userId);
-                    }
-                    console.log(`User Not Signed In. Using Local ID: ${userId}`);
-                }
-
-                currentUserId = userId;
-                elements.userIdDisplay.textContent = currentUserId;
-
-                // بدء تهيئة التطبيق بمنطقية بعد تحديد معرف المستخدم
-                initApp(currentUserId);
-            });
-        }
-
-        // =========================================================================
-        //                      وظائف التطبيق الرئيسية (App Logic)
-        // =========================================================================
-
-        /** تهيئة التطبيق بعد المصادقة */
-        function initApp(userId) {
-            console.log("Application Initialized for User:", userId);
-            
-            loadSystemSettings(); // تحميل الإعدادات أولاً
-            setupBookingsListener(); // ثم الاستماع للحجوزات
-            setupEventListeners(); // إعداد المستمعين لواجهة المستخدم
-        }
-
-        /** تحميل إعدادات النظام وتعيين المستمع */
-        function loadSystemSettings() {
-            onSnapshot(settingsDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    systemSettings = docSnap.data();
-                    console.log("System Settings loaded:", systemSettings);
-                } else {
-                    // إعدادات افتراضية في حالة عدم وجود مستند
-                    systemSettings = {
-                        [MAX_BREAKS_FIELD]: 1,
-                        [BREAK_DURATION_FIELD]: 15,
-                        adminLoggedIn: false
-                    };
-                    // إنشاء المستند الافتراضي إذا لم يكن موجوداً
-                    setDoc(settingsDocRef, systemSettings, { merge: true }).catch(e => console.error("Error creating default settings:", e));
-                }
-                applySettingsToUI();
-                renderTimeSlots(); // إعادة رسم الأوقات بعد تحديث الإعدادات
-            }, (error) => {
-                console.error("Error fetching settings:", error);
-                showMessage("خطأ في تحميل إعدادات النظام.", 'error');
-            });
-        }
-        
-        /** تطبيق الإعدادات المحملة على واجهة المستخدم */
-        function applySettingsToUI() {
-            elements.maxBreaksInput.value = systemSettings[MAX_BREAKS_FIELD] || 1;
-            elements.breakDurationInput.value = systemSettings[BREAK_DURATION_FIELD] || 15;
-
-            // تحديث وضع المدير في حال خروج المدير من مكان آخر
-            if (isAdminMode && !systemSettings.adminLoggedIn) {
-                logoutAdmin();
-            }
-        }
-
-        /** إعداد مستمع الحجوزات في الوقت الفعلي */
-        function setupBookingsListener() {
-            // فلترة الحجوزات لليوم الحالي فقط
-            const todayKey = getTodayKey();
-            const q = query(bookingsCollectionRef, where("dateKey", "==", todayKey));
-
-            onSnapshot(q, (snapshot) => {
-                currentBookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Current Bookings updated:", currentBookings);
-                renderTimeSlots();
-                if (isAdminMode) {
-                    renderAdminBookings();
-                }
-            }, (error) => {
-                console.error("Error fetching bookings:", error);
-                showMessage("خطأ في تحميل الحجوزات.", 'error');
-            });
-        }
-
-        /** رسم مربعات الأوقات وتحديث حالتها */
-        function renderTimeSlots() {
-            const duration = parseInt(elements.breakDurationInput.value || 15);
-            const slots = generateTimeSlots(duration);
-            elements.bookingsGrid.innerHTML = '';
-            
-            const selectedDepartment = elements.departmentSelect.value;
-            const maxBreaks = parseInt(elements.maxBreaksInput.value || 1);
-
-            slots.forEach(slot => {
-                // فحص الحجوزات لهذا القسم ولهذا الوقت
-                const booking = currentBookings.find(b => b.timeSlotId === slot.id && b.department === selectedDepartment);
-
-                let status = 'available';
-                let buttonText = 'حجز';
-                let bgColor = 'bg-secondary-green hover:bg-green-600';
-                let textColor = 'text-white';
-                let userBreakCount = currentBookings.filter(b => b.userId === currentUserId && b.department === selectedDepartment).length;
-                let isBookedByUser = false;
-
-                if (booking) {
-                    if (booking.userId === currentUserId) {
-                        status = 'booked-by-user';
-                        buttonText = 'إلغاء الحجز';
-                        bgColor = 'bg-danger-red hover:bg-red-600';
-                        textColor = 'text-white';
-                        isBookedByUser = true;
-                    } else {
-                        status = 'booked-by-other';
-                        buttonText = 'محجوز';
-                        bgColor = 'bg-gray-400 dark:bg-gray-600';
-                        textColor = 'text-gray-900 dark:text-gray-100';
-                    }
-                } else if (userBreakCount >= maxBreaks) {
-                    status = 'limit-reached';
-                    buttonText = 'تم تجاوز الحد';
-                    bgColor = 'bg-gray-200 dark:bg-gray-700';
-                    textColor = 'text-gray-500 dark:text-gray-400';
-                }
-
-                // تحديد ما إذا كان الزر معطلاً
-                const isDisabled = (status === 'booked-by-other' || status === 'limit-reached') && !isBookedByUser;
-                const cursorStyle = isDisabled ? 'cursor-not-allowed' : 'cursor-pointer';
-
-                const slotHTML = `
-                    <div class="p-3 border rounded-lg shadow-sm transition-all duration-200 ${booking ? (isBookedByUser ? 'border-danger-red dark:border-red-500' : 'border-gray-300 dark:border-gray-600') : 'border-secondary-green dark:border-green-500'} dark:bg-gray-700">
-                        <p class="text-sm font-bold text-gray-900 dark:text-white">${slot.start} - ${slot.end}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            ${booking ? (isBookedByUser ? 'حجزك' : `محجوز بواسطة: ${booking.userId.substring(0, 8)}...`) : 'متاح'}
-                        </p>
-                        <button 
-                            class="w-full text-xs font-semibold py-2 rounded-md transition-colors ${bgColor} ${textColor} ${isDisabled ? 'opacity-50' : ''} ${cursorStyle}"
-                            data-slot-id="${slot.id}"
-                            data-booking-id="${booking ? booking.id : ''}"
-                            data-is-booked-by-user="${isBookedByUser}"
-                            ${isDisabled ? 'disabled' : ''}
-                        >
-                            ${buttonText}
-                        </button>
-                    </div>
-                `;
-                elements.bookingsGrid.insertAdjacentHTML('beforeend', slotHTML);
-            });
-
-            // إضافة مستمعي الأحداث لمربعات الحجز الجديدة
-            elements.bookingsGrid.querySelectorAll('button').forEach(button => {
-                button.addEventListener('click', () => handleBooking(button));
-            });
-        }
-
-        /** معالجة حجز أو إلغاء حجز فترة زمنية */
-        async function handleBooking(button) {
-            const slotId = button.dataset.slotId;
-            const bookingId = button.dataset.bookingId;
-            const isBookedByUser = button.dataset.isBookedByUser === 'true';
-            const department = elements.departmentSelect.value;
-            
-            // تحقق من وجود معرف المستخدم
-            if (!currentUserId) {
-                showMessage("لا يمكن المتابعة. فشل في تحديد معرف المستخدم.", 'error');
-                return;
-            }
-
-            if (isBookedByUser) {
-                // إلغاء الحجز
-                try {
-                    await setDoc(doc(bookingsCollectionRef, bookingId), {
-                        deleted: true,
-                        deletedAt: new Date(),
-                        deletedBy: currentUserId
-                    }, { merge: true });
-                    showMessage("تم إلغاء حجز البريك بنجاح.", 'success');
-                } catch (e) {
-                    console.error("Error cancelling booking:", e);
-                    showMessage("فشل في إلغاء الحجز.", 'error');
-                }
-            } else {
-                // حجز جديد
-                try {
-                    // تحقق مزدوج من الحد الأقصى للحجوزات
-                    const maxBreaks = parseInt(elements.maxBreaksInput.value || 1);
-                    const userBreakCount = currentBookings.filter(b => b.userId === currentUserId && b.department === department && !b.deleted).length;
-
-                    if (userBreakCount >= maxBreaks) {
-                        showMessage(`لقد وصلت إلى الحد الأقصى للحجوزات (${maxBreaks}) في هذا القسم.`, 'warning');
-                        return;
-                    }
-
-                    // تحقق من أن الفترة غير محجوزة بالفعل (للحد من التعارضات المتزامنة)
-                    const existingBooking = currentBookings.find(b => b.timeSlotId === slotId && b.department === department && !b.deleted);
-                    if (existingBooking) {
-                        showMessage("هذه الفترة محجوزة للتو من قبل شخص آخر. يرجى التحديث والمحاولة مرة أخرى.", 'warning');
-                        return;
-                    }
-
-                    const newBookingData = {
-                        timeSlotId: slotId,
-                        department: department,
-                        userId: currentUserId,
-                        dateKey: getTodayKey(),
-                        createdAt: new Date(),
-                        deleted: false
-                    };
-
-                    // Firestore's addDoc will automatically generate a unique ID
-                    await setDoc(doc(bookingsCollectionRef, `${slotId}-${department}-${getTodayKey()}`), newBookingData);
-                    showMessage("تم حجز البريك بنجاح!", 'success');
-
-                } catch (e) {
-                    console.error("Error setting booking:", e);
-                    showMessage("فشل في حجز البريك. يرجى المحاولة مرة أخرى.", 'error');
-                }
-            }
-        }
-
-        /** عرض قائمة الحجوزات لوضع المدير */
-        function renderAdminBookings() {
-            elements.adminBookingsList.innerHTML = '';
-            
-            const activeBookings = currentBookings.filter(b => !b.deleted).sort((a, b) => a.timeSlotId.localeCompare(b.timeSlotId));
-
-            if (activeBookings.length === 0) {
-                elements.noAdminBookings.classList.remove('hidden');
-            } else {
-                elements.noAdminBookings.classList.add('hidden');
-                activeBookings.forEach(booking => {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-lg';
-                    listItem.innerHTML = `
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">${booking.timeSlotId}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">القسم: ${booking.department} | المستخدم: ${booking.userId.substring(0, 12)}...</p>
-                        </div>
-                        <button class="admin-delete-booking bg-danger-red hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-md ml-2 transition-colors" data-id="${booking.id}">
-                            حذف
-                        </button>
-                    `;
-                    elements.adminBookingsList.appendChild(listItem);
-                });
-
-                elements.adminBookingsList.querySelectorAll('.admin-delete-booking').forEach(button => {
-                    button.addEventListener('click', (e) => handleAdminDeleteBooking(e.currentTarget.dataset.id));
-                });
-            }
-        }
-
-        /** معالجة حذف حجز في وضع المدير */
-        async function handleAdminDeleteBooking(bookingId) {
-            try {
-                await setDoc(doc(bookingsCollectionRef, bookingId), {
-                    deleted: true,
-                    deletedAt: new Date(),
-                    deletedBy: currentUserId,
-                    adminDeleted: true
-                }, { merge: true });
-                showMessage("تم حذف الحجز بنجاح (وضع المدير).", 'warning');
-            } catch (e) {
-                console.error("Error deleting booking (Admin):", e);
-                showMessage("فشل في حذف الحجز.", 'error');
-            }
-        }
-        
-        /** حفظ إعدادات المدير */
-        async function saveAdminSettings() {
-            const newMaxBreaks = parseInt(elements.adminMaxBreaks.value);
-            const newDuration = parseInt(elements.adminBreakDuration.value);
-            
-            if (isNaN(newMaxBreaks) || isNaN(newDuration) || newMaxBreaks < 1) {
-                showMessage("قيمة الإعدادات غير صالحة.", 'error');
-                return;
-            }
-
-            try {
-                await updateDoc(settingsDocRef, {
-                    [MAX_BREAKS_FIELD]: newMaxBreaks,
-                    [BREAK_DURATION_FIELD]: newDuration
-                });
-                showMessage("تم حفظ الإعدادات بنجاح.", 'success');
-            } catch (e) {
-                console.error("Error saving admin settings:", e);
-                showMessage("فشل في حفظ الإعدادات.", 'error');
-            }
-        }
-
-        /** تسجيل دخول المدير */
-        async function loginAdmin() {
-            const code = elements.adminCode.value;
-            if (code === ADMIN_CODE) {
-                try {
-                    // تحديث حالة المدير في Firestore لمنع التزامن المتعدد
-                    await updateDoc(settingsDocRef, { adminLoggedIn: true, adminUserId: currentUserId, adminLoginTime: new Date() });
-                    isAdminMode = true;
-                    elements.adminLoginForm.classList.add('hidden');
-                    elements.adminContent.classList.remove('hidden');
-                    
-                    // تحديث قيم الإدخال في وضع المدير
-                    elements.adminMaxBreaks.value = systemSettings[MAX_BREAKS_FIELD];
-                    elements.adminBreakDuration.value = systemSettings[BREAK_DURATION_FIELD];
-                    
-                    renderAdminBookings();
-                    showMessage("تم تسجيل الدخول كمدير بنجاح!", 'success');
-                } catch (e) {
-                    console.error("Error setting admin state:", e);
-                    showMessage("فشل في تسجيل الدخول كمدير. يرجى المحاولة مرة أخرى.", 'error');
-                }
-
-            } else {
-                showMessage("رمز المدير غير صحيح.", 'error');
-            }
-        }
-
-        /** تسجيل خروج المدير */
-        async function logoutAdmin() {
-            try {
-                // تحديث حالة المدير في Firestore
-                await updateDoc(settingsDocRef, { adminLoggedIn: false, adminUserId: null });
-                isAdminMode = false;
-                elements.adminContent.classList.add('hidden');
-                elements.adminLoginForm.classList.remove('hidden');
-                elements.adminCode.value = ''; // مسح الرمز
-                showMessage("تم تسجيل الخروج من وضع المدير.", 'info');
-            } catch (e) {
-                console.error("Error logging out admin:", e);
-                // يمكن السماح بالخروج محلياً حتى إذا فشل تحديث Firestore
-                isAdminMode = false;
-                elements.adminContent.classList.add('hidden');
-                elements.adminLoginForm.classList.remove('hidden');
-                elements.adminCode.value = '';
-                showMessage("تم تسجيل الخروج محلياً، حدث خطأ في تحديث قاعدة البيانات.", 'warning');
-            }
-        }
-
-
-        /** إعداد مستمعي أحداث الواجهة */
-        function setupEventListeners() {
-            elements.departmentSelect.addEventListener('change', renderTimeSlots);
-            elements.breakDurationInput.addEventListener('change', renderTimeSlots);
-            elements.maxBreaksInput.addEventListener('change', renderTimeSlots);
-            
-            // فتح نافذة المدير
-            elements.adminButton.addEventListener('click', () => {
-                // منع الفتح إذا كان هناك مدير آخر مسجل الدخول
-                if (systemSettings.adminLoggedIn && systemSettings.adminUserId !== currentUserId) {
-                    showMessage("مدير آخر يقوم بتعديل الإعدادات حالياً.", 'warning');
-                    return;
-                }
-                elements.adminModal.classList.remove('hidden');
-                feather.replace(); // تحديث الأيقونات في النافذة
-            });
-
-            // إغلاق نافذة المدير
-            elements.closeAdminModal.addEventListener('click', () => {
-                elements.adminModal.classList.add('hidden');
-            });
-            
-            // معالجة تسجيل الدخول للمدير
-            elements.adminLoginButton.addEventListener('click', loginAdmin);
-            
-            // معالجة تسجيل الخروج للمدير
-            elements.adminLogoutButton.addEventListener('click', logoutAdmin);
-            
-            // حفظ إعدادات المدير
-            elements.saveAdminSettingsButton.addEventListener('click', saveAdminSettings);
-        }
-
-        // بدء عملية المصادقة والتطبيق
-        document.addEventListener('DOMContentLoaded', () => {
-            initAuthAndApp();
-            feather.replace(); // استبدال الأيقونات عند تحميل DOM
-        });
-        
-    </script>
 </body>
 </html>
